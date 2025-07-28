@@ -53,7 +53,6 @@ class VideoAnalyzer:
     def stop(self):
         print("[VideoAnalyzer] Stopping analysis loop...")
         self.running = False
-        self.thread.join()
 
     def update_frame(self, frame):
         with self.lock:
