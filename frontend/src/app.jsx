@@ -161,6 +161,18 @@ function App() {
             <p>🎯 중심 시선 비율: {analysisResult.gaze_center_ratio !== undefined ? analysisResult.gaze_center_ratio.toFixed(1) + '%' : '-'}</p>
             <p>🔄 시선 이동 횟수: {analysisResult.gaze_shift_count || 0}</p>
             <p>🔄 자세 변화 횟수: {analysisResult.posture_change_count || 0}</p>
+
+            {analysisResult.emotions && analysisResult.emotions.length > 0 && (
+              <div style={{ marginTop: 10 }}>
+                <h3>😊 감정 분석</h3>
+                {analysisResult.emotions.map((emotionObj, index) => (
+                  <p key={index}>
+                    😃 감정: <strong>{emotionObj.emotion}</strong> (
+                    신뢰도: {(emotionObj.confidence * 100).toFixed(1)}%)
+                  </p>
+                ))}
+              </div>
+            )}
           </div>
         </>
       )}

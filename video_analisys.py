@@ -1,11 +1,13 @@
 # posture
 from collections import deque
+from ultralytics import YOLO
 
 import cv2
 import math
 import mediapipe as mp
 import numpy as np
 import threading
+import os
 
 class VideoAnalyzer:
     def __init__(self):
@@ -13,6 +15,8 @@ class VideoAnalyzer:
         self.mp_pose = mp.solutions.pose
         self.face_mesh = self.mp_face_mesh.FaceMesh(refine_landmarks=True)
         self.pose = self.mp_pose.Pose()
+
+        self.yolo_model = YOLO('best.pt')
 
         self.eye_history = deque(maxlen=30)
         self.shoulder_center_history = deque(maxlen=30)
@@ -77,6 +81,23 @@ class VideoAnalyzer:
         self.total_frame_count += 1
 
         response = {}
+
+        # ✅ YOLO 감정 분석 추가
+        try:
+            results = self.yolo_model.predict(source=frame, conf=0.3, stream=False, verbose=False)[0]  # 첫 번째 결과
+            emotions = []
+
+            for box, cls, conf in zip(results.boxes.xyxy, results.boxes.cls, results.boxes.conf):
+                emotion = self.yolo_model.names[int(cls)]
+                emotions.append({
+                    "emotion": emotion,
+                    "confidence": float(conf),
+                    "box": [float(coord) for coord in box.tolist()]
+                })
+
+            response["emotions"] = emotions
+        except Exception as e:
+            response["emotion_error"] = str(e)
 
         # 얼굴 메시 결과가 있으면
         if face_result.multi_face_landmarks:
