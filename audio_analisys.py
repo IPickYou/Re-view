@@ -5,6 +5,8 @@ from pynput import keyboard
 from sklearn.metrics.pairwise import cosine_similarity
 from utils import OpenAIClient, OpenAIEmbedding, dump_json, read_json
 
+import datetime
+import json
 import os
 import pyaudio
 import pyloudnorm as pyln
@@ -13,6 +15,7 @@ import threading
 import time
 import torch
 import queue
+import wave
 import whisper
 
 """
@@ -42,6 +45,7 @@ class RealtimeAudioAnalyzer:
         self.closed = True
         self.client = speech.SpeechClient()
         self.streaming_config = self._get_streaming_config()
+        self.sentences = {}
 
     def _get_streaming_config(self):
         config = speech.RecognitionConfig(
@@ -66,7 +70,29 @@ class RealtimeAudioAnalyzer:
                 return
             yield speech.StreamingRecognizeRequest(audio_content=chunk)
 
-    def _listen_print_loop(self, responses):
+    def _calculate_lufs(self, wav_file_path):
+        data, rate = sf.read(wav_file_path)
+        meter = pyln.Meter(rate)
+        loudness = meter.integrated_loudness(data)
+        return loudness
+
+    def _save_recent_audio(self, filename, duration_sec):
+        # 예: self.recent_audio_chunk에 audio bytes 누적 저장
+        with wave.open(filename, 'wb') as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)  # 16bit PCM
+            wf.setframerate(RATE)
+            byte_data = b''.join(self.recent_audio_chunk[-int(duration_sec * RATE / CHUNK):])
+            wf.writeframes(byte_data)
+
+    def save_results(self, output_name="stt_analysis"):
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{output_name}_{timestamp}.json"
+        dump_json(filename = filename, json_data = {"interview": self.sentences})
+
+    def _analyze_audio(self, responses):
+        start_time = time.time()
+
         for response in responses:
             print("📥 응답 수신됨")
 
@@ -75,12 +101,68 @@ class RealtimeAudioAnalyzer:
                 continue
 
             result = response.results[0]
-            transcript = result.alternatives[0].transcript
+            transcript = result.alternatives[0].transcript.strip()
 
             if result.is_final:
-                print(f"🗣️ [최종] 인식 결과: {transcript}")
+                end_time = time.time()
+                duration = end_time - start_time
+                wps = len(transcript.split()) / duration if duration > 0 else 0
+
+                # 1. 문장 교정
+                corrected = self.openai_client.create_response(
+                    system_content=(
+                        "당신은 면접자의 음성 인식 결과를 맞춤법과 흐름 위주로 교정하는 교정 도우미입니다. "
+                        "사용자의 어투 및 어미를 보존하고, 문법 오류와 앞 뒤 단어와 이어지지 않는 어색한 표현만 자연스럽게 수정하세요."
+                    ),
+                    user_content=transcript
+                )
+
+                # 2. 유사도 계산
+                original_embedding = OpenAIEmbedding(transcript)
+                corrected_embedding = OpenAIEmbedding(corrected)
+                similarity = cosine_similarity([original_embedding], [corrected_embedding])[0][0]
+
+                # 3. 실시간 감정 분석용 오디오 segment 추출
+                tmp_filename = "tmp_segment.wav"
+                self._save_recent_audio(tmp_filename, duration)
+
+                lufs = self._calculate_lufs(tmp_filename) # 🔊 LUFS 계산
+
+                audio_features = extract_audio_features(tmp_filename)
+
+                emotion_prompt = f"""
+                문장: "{transcript}"
+                평균 pitch: {audio_features["pitch_mean"]:.1f}Hz, pitch 변화량: {audio_features["pitch_std"]:.2f}
+                평균 에너지: {audio_features["energy_mean"]:.5f}, 에너지 변화량: {audio_features["energy_std"]:.5f}
+                말 빠르기(WPS): {wps:.2f}
+                """
+
+                emotion = self.openai_client.create_response(
+                    system_content=(
+                        "당신은 문장의 감정을 분석하는 전문가입니다. "
+                        "텍스트와 음향적 특성을 고려하여 이 문장의 감정을 추론하세요. 감정 하나의 단어만 출력하세요."
+                    ),
+                    user_content=emotion_prompt
+                )
+
+                print(f"🗣️ [최종] [{emotion}] {corrected}")
+
+                # 분석 결과 저장
+                self.sentences.append({
+                    "original_sentence": transcript,
+                    "corrected_sentence": corrected,
+                    "cosine_similarity": similarity,
+                    "emotion": emotion,
+                    "start": start_time,
+                    "end": end_time,
+                    "wps": wps,
+                    "lufs": lufs
+                })
+
+                start_time = time.time()  # 다음 문장을 위한 시작시간 초기화
+
             else:
-                print(f"💬 [중간] {transcript}", end="\r")  # 실시간 업데이트
+                print(f"💬 [중간] {transcript}", end="\r")
 
     def start(self):
         print("🔧 start() 실행됨")
@@ -115,7 +197,7 @@ class RealtimeAudioAnalyzer:
             responses = self.client.streaming_recognize(self.streaming_config, requests)
 
             def recognize_loop():
-                self._listen_print_loop(responses)
+                self._analyze_audio(responses)
 
             audio_thread = threading.Thread(target=recognize_loop)
             audio_thread.start()
