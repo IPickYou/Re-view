@@ -111,7 +111,7 @@ class RealtimeAudioAnalyzer:
 
     def save_results(self, output_name="stt_analysis"):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"{output_name}_{timestamp}.json"
+        filename = f"{output_name}_{timestamp}"
         dump_json(filename = filename, json_data = {"interview": self.sentences})
 
     def _analyze_audio(self, responses):
