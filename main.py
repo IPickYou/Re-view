@@ -1,13 +1,25 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
+from audio_analisys import RealtimeAudioAnalyzer
+from video_analisys import VideoAnalyzer
 
-app = FastAPI()
+import threading
 
-class AddRequest(BaseModel):
-    a: int
-    b: int
+# 🔊 음성 인식 함수
+def run_audio():
+    analyzer = RealtimeAudioAnalyzer()
+    analyzer.start()
 
-@app.post("/add")
-def add(req: AddRequest):
-    result = req.a + req.b
-    return {"result": result}
+# 🎥 영상 인식 함수 (예: 얼굴 감지)
+def run_video():
+    analyzer = VideoAnalyzer()
+    analyzer.start()
+
+def start_recognition():
+    audio_thread = threading.Thread(target=run_audio)
+    video_thread = threading.Thread(target=run_video)
+
+    audio_thread.start()
+    video_thread.start()
+
+    return {"status": "recognition started"}
+
+start_recognition()

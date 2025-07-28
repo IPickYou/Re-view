@@ -1,6 +1,7 @@
 from audio_utils import extract_audio_features
 from dotenv import load_dotenv
 from google.cloud import speech
+from pynput import keyboard
 from sklearn.metrics.pairwise import cosine_similarity
 from utils import OpenAIClient, OpenAIEmbedding, dump_json, read_json
 
@@ -8,6 +9,8 @@ import os
 import pyaudio
 import pyloudnorm as pyln
 import soundfile as sf
+import threading
+import time
 import torch
 import queue
 import whisper
@@ -80,7 +83,7 @@ class RealtimeAudioAnalyzer:
                 print(f"💬 [중간] {transcript}", end="\r")  # 실시간 업데이트
 
     def start(self):
-        print("🔧 start() 실행됨")  # ← 이 줄 추가
+        print("🔧 start() 실행됨")
 
         self.closed = False
         audio_interface = pyaudio.PyAudio()
@@ -91,22 +94,47 @@ class RealtimeAudioAnalyzer:
             stream_callback=self._fill_buffer,
         )
 
-        print("🎤 음성 인식 시작 (중지하려면 Ctrl+C)...")
+        print("🎤 음성 인식 시작 (ESC 키로 종료)...")
+
+        # ESC 눌렀을 때 실행할 함수
+        def on_press(key):
+            if key == keyboard.Key.esc:
+                print("🛑 ESC 키로 종료 요청됨.", flush=True)
+                self.closed = True
+                audio_stream.stop_stream()
+                self._buff.put(None)
+                return False  # 리스너 종료
+
+        # 키보드 리스너 실행
+        listener = keyboard.Listener(on_press=on_press)
+        listener.start()
 
         try:
             print("🔁 오디오 스트림 시작됨")
             requests = self._audio_generator()
             responses = self.client.streaming_recognize(self.streaming_config, requests)
-            self._listen_print_loop(responses)
-        except KeyboardInterrupt:
-            print("\n🛑 인식 중지됨.")
+
+            def recognize_loop():
+                self._listen_print_loop(responses)
+
+            audio_thread = threading.Thread(target=recognize_loop)
+            audio_thread.start()
+
+            # ESC 감지 루프 대신 리스너가 비동기 동작하므로
+            # 여기서는 closed 상태만 체크하며 대기
+            while not self.closed:
+                time.sleep(0.1)
+
+            audio_thread.join()
+
         finally:
-            print("🧹 리소스 정리 중")
+            print("🧹 리소스 정리 중", flush=True)
             audio_stream.stop_stream()
             audio_stream.close()
             audio_interface.terminate()
             self.closed = True
             self._buff.put(None)
+            listener.stop()
 
 class StaticAudioAnalyzer:
     def __init__(self):
