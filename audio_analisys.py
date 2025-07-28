@@ -1,4 +1,5 @@
 from audio_utils import extract_audio_features
+from datetime import datetime
 from dotenv import load_dotenv
 from google.cloud import speech
 from pynput import keyboard
@@ -6,7 +7,6 @@ from sklearn.metrics.pairwise import cosine_similarity
 from utils import OpenAIClient, OpenAIEmbedding, dump_json, read_json
 from queue import Queue
 
-import datetime
 import os
 import pyaudio
 import pyloudnorm as pyln
@@ -52,6 +52,15 @@ class RealtimeAudioAnalyzer:
         self.postprocess_queue = Queue()
         self.postprocess_thread = threading.Thread(target=self._postprocess_worker)
         self.postprocess_thread.start()
+
+        self.audio_interface = pyaudio.PyAudio()
+        self.audio_stream = self.audio_interface.open(
+            format=pyaudio.paInt16,
+            channels=1, rate=RATE,
+            input=True, frames_per_buffer=CHUNK,
+            stream_callback=self._fill_buffer,
+        )
+
 
     def _get_streaming_config(self):
         config = speech.RecognitionConfig(
@@ -204,58 +213,40 @@ class RealtimeAudioAnalyzer:
         print("🔧 start() 실행됨")
 
         self.closed = False
-        audio_interface = pyaudio.PyAudio()
-        audio_stream = audio_interface.open(
-            format=pyaudio.paInt16,
-            channels=1, rate=RATE,
-            input=True, frames_per_buffer=CHUNK,
-            stream_callback=self._fill_buffer,
-        )
+        
+        print("🔁 오디오 스트림 시작됨")
+        requests = self._audio_generator()
+        responses = self.client.streaming_recognize(self.streaming_config, requests)
 
-        print("🎤 음성 인식 시작 (ESC 키로 종료)...")
+        def recognize_loop():
+            self._analyze_audio(responses)
 
-        # ESC 눌렀을 때 실행할 함수
-        def on_press(key):
-            if key == keyboard.Key.esc:
-                print("🛑 ESC 키로 종료 요청됨.", flush=True)
-                self.closed = True
-                audio_stream.stop_stream()
-                self._buff.put(None)
-                self.save_results()
-                self.postprocess_queue.put(None)
-                self.postprocess_thread.join()
-                return False  # 리스너 종료
+        audio_thread = threading.Thread(target=recognize_loop)
+        audio_thread.start()
 
-        # 키보드 리스너 실행
-        listener = keyboard.Listener(on_press=on_press)
-        listener.start()
+        # ESC 감지 루프 대신 리스너가 비동기 동작하므로
+        # 여기서는 closed 상태만 체크하며 대기
+        while not self.closed:
+            time.sleep(0.1)
 
-        try:
-            print("🔁 오디오 스트림 시작됨")
-            requests = self._audio_generator()
-            responses = self.client.streaming_recognize(self.streaming_config, requests)
+        audio_thread.join()
+        self.cleanup()
+    
+    def stop(self):
+        print("🛑 중지 함수 호출됨.")
+        self.closed = True
+        self._buff.put(None)
+        self.save_results()
+        self.postprocess_queue.put(None)
+        self.postprocess_thread.join()
 
-            def recognize_loop():
-                self._analyze_audio(responses)
-
-            audio_thread = threading.Thread(target=recognize_loop)
-            audio_thread.start()
-
-            # ESC 감지 루프 대신 리스너가 비동기 동작하므로
-            # 여기서는 closed 상태만 체크하며 대기
-            while not self.closed:
-                time.sleep(0.1)
-
-            audio_thread.join()
-
-        finally:
-            print("🧹 리소스 정리 중", flush=True)
-            audio_stream.stop_stream()
-            audio_stream.close()
-            audio_interface.terminate()
-            self.closed = True
-            self._buff.put(None)
-            listener.stop()
+    def cleanup(self):
+        print("🧹 리소스 정리 중")
+        if self.audio_stream is not None:
+            self.audio_stream.stop_stream()
+            self.audio_stream.close()
+        if self.audio_interface is not None:
+            self.audio_interface.terminate()
 
 class StaticAudioAnalyzer:
     def __init__(self):
