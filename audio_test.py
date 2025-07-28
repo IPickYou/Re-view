@@ -1,6 +1,6 @@
-from audio_analisys import RealTimeAudioAnalyzer, StaticAudioAnalyzer, AudioEvaluator
-
-import time
+from audio_analisys import RealtimeAudioAnalyzer # 실시간
+from audio_analisys import StaticAudioAnalyzer # 음성 파일
+from audio_analisys import AudioEvaluator # 평가
 
 # analyzer = StaticAudioAnalyzer()
 
@@ -12,19 +12,15 @@ import time
 # ]:
 #     analyzer.analize_audio(audio)
 
-for json in [
-    "ckmk_a_bm_f_e_47109",
-    "ckmk_a_bm_f_e_47110",
-    "ckmk_a_bm_f_e_47111",
-    "ckmk_a_bm_f_e_47112"
-]:
-    eval = AudioEvaluator(json)
-    eval.evaluate()
+# for json in [
+#     "ckmk_a_bm_f_e_47109",
+#     "ckmk_a_bm_f_e_47110",
+#     "ckmk_a_bm_f_e_47111",
+#     "ckmk_a_bm_f_e_47112"
+# ]:
+#     eval = AudioEvaluator(json)
+#     eval.evaluate()
 
-# analyzer = RealTimeAudioAnalyzer()
-# try:
-#     analyzer.start_stream()
-#     while True:
-#         time.sleep(1)
-# except KeyboardInterrupt:
-#     analyzer.stop()
+if __name__ == "__main__":
+    analyzer = RealtimeAudioAnalyzer(language_code="ko-KR")
+    analyzer.start()

@@ -1,17 +1,21 @@
 from audio_utils import extract_audio_features
+from datetime import datetime
+from dotenv import load_dotenv
+from google.cloud import speech
+from pynput import keyboard
 from sklearn.metrics.pairwise import cosine_similarity
 from utils import OpenAIClient, OpenAIEmbedding, dump_json, read_json
 from queue import Queue
 
-import numpy as np
 import os
+import pyaudio
 import pyloudnorm as pyln
-import sounddevice as sd
 import soundfile as sf
-import tempfile
 import threading
 import time
 import torch
+import queue
+import wave
 import whisper
 
 """
@@ -28,116 +32,221 @@ import whisper
     - 참고 근거 : https://www.kci.go.kr/kciportal/ci/sereArticleSearch/ciSereArtiView.kci?sereArticleSearchBean.artiId=ART002099342
 """
 
-class RealTimeAudioAnalyzer:
-    def __init__(self):
-        self.whisper_model = self.load_whisper_model()
+# 마이크 설정
+RATE = 16000
+CHUNK = int(RATE / 10)  # 100ms
 
-        self.q = Queue()
-        self.sample_rate = 16000
-        self.chunk_duration = 5 # 초 단위
+class RealtimeAudioAnalyzer:
+    def __init__(self, language_code="ko-KR"):
+        load_dotenv()
         self.openai_client = OpenAIClient()
-        self.listening = False
-        self.output_sentences = []
 
-    def load_whisper_model(self, model_size = "large"):
-        '''
-        Whisper 모델을 return 하는 함수(model_size 다운그레이드 시 발음이 부정확할 경우 이상하게 인식되는 경우가 있어 large 고정)
+        self.language_code = language_code
+        self._buff = queue.Queue()
+        self.closed = True
+        self.client = speech.SpeechClient()
+        self.streaming_config = self._get_streaming_config()
+        self.recent_audio_chunk = []
+        self.sentences = []
 
-        파라미터
-        - model_size: Whisper 모델 크기(tiny, base, small, medium, large 중 선택)
+        self.postprocess_queue = Queue()
+        self.postprocess_thread = threading.Thread(target=self._postprocess_worker)
+        self.postprocess_thread.start()
 
-        호출 예시: model = load_whisper_model()
-        '''
-        
-        model = whisper.load_model(model_size) # Whisper 모델 로드
-        print(f"호출된 모델 크기: {model_size}")
+        self.audio_interface = pyaudio.PyAudio()
+        self.audio_stream = self.audio_interface.open(
+            format=pyaudio.paInt16,
+            channels=1, rate=RATE,
+            input=True, frames_per_buffer=CHUNK,
+            stream_callback=self._fill_buffer,
+        )
 
-        # GPU 사용 가능하면 모델을 GPU로
-        if torch.cuda.is_available():
-            print("✅ CUDA 사용 가능 — GPU로 모델 로드 중")
-            model = model.to("cuda")
-        else:
-            print("⚠️ CUDA 사용 불가 — CPU로 실행됩니다")
-        
-        return model
-    
-    def audio_callback(self, indata, frames, time_info, status):
-        self.q.put(indata.copy())
 
-    def start_stream(self):
-        self.listening = True
-        threading.Thread(target=self._record_audio, daemon=True).start()
-        threading.Thread(target=self._transcribe_loop, daemon=True).start()
-        print("🎧 실시간 음성 분석을 시작합니다. (Ctrl+C로 종료)")
+    def _get_streaming_config(self):
+        config = speech.RecognitionConfig(
+            encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
+            sample_rate_hertz=RATE,
+            language_code=self.language_code,
+            enable_automatic_punctuation=True,
+        )
+        return speech.StreamingRecognitionConfig(
+            config=config,
+            interim_results=True
+        )
 
-    def _record_audio(self):
-        with sd.InputStream(samplerate=self.sample_rate, channels=1, callback=self.audio_callback):
-            while self.listening:
-                time.sleep(0.1)
+    def _fill_buffer(self, in_data, frame_count, time_info, status_flags):
+        self._buff.put(in_data)
+        self.recent_audio_chunk.append(in_data)
+        return None, pyaudio.paContinue
 
-    def _transcribe_loop(self):
-        while self.listening:
-            audio_chunk = self.q.get()
-            audio_chunk = np.squeeze(audio_chunk)
+    def _audio_generator(self):
+        while not self.closed:
+            chunk = self._buff.get()
+            if chunk is None:
+                return
+            yield speech.StreamingRecognizeRequest(audio_content=chunk)
 
-            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
-                filepath = f.name
-                sf.write(f.name, audio_chunk, self.sample_rate)
+    def _calculate_lufs(self, wav_file_path):
+        data, rate = sf.read(wav_file_path)
+        meter = pyln.Meter(rate)
+        if len(data.shape) > 1:  # 스테레오인 경우
+            data = data.mean(axis=1)  # 모노로 변환
 
-            # Whisper 처리
-            result = self.whisper_model.transcribe(
-                filepath,
-                fp16=torch.cuda.is_available(),
-                temperature=0.2,
-                initial_prompt="이 오디오는 면접자의 답변입니다."
-            )
+        loudness = meter.integrated_loudness(data)
+        return loudness
 
-            text = result["text"].strip()
-            duration = self.chunk_duration
-            wps = len(text.split()) / duration if duration > 0 else 0
+    def _save_recent_audio(self, filename, duration_sec):
+        # 예: self.recent_audio_chunk에 audio bytes 누적 저장
+        with wave.open(filename, 'wb') as wf:
+            required_chunks = int(duration_sec * RATE / CHUNK)
+            if len(self.recent_audio_chunk) < required_chunks:
+                print("⚠️ 오디오 버퍼 부족, segment 저장 건너뜀")
+                return
+            
+            wf.setnchannels(1)
+            wf.setsampwidth(2)  # 16bit PCM
+            wf.setframerate(RATE)
+            byte_data = b''.join(self.recent_audio_chunk[-int(duration_sec * RATE / CHUNK):])
+            wf.writeframes(byte_data)
 
-            # 교정
+    def save_results(self, output_name="stt_analysis"):
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{output_name}_{timestamp}.json"
+        dump_json(filename = filename, json_data = {"interview": self.sentences})
+
+    def _analyze_audio(self, responses):
+        start_time = time.time()
+
+        for response in responses:
+            print("📥 응답 수신됨")
+
+            if not response.results:
+                print("⚠️ 빈 응답")
+                continue
+
+            result = response.results[0]
+            transcript = result.alternatives[0].transcript.strip()
+
+            if result.is_final:
+                end_time = time.time()
+                self.postprocess_queue.put((transcript, start_time, end_time))
+                
+                print(f"💬 [최종] {transcript}", end="\r")
+                start_time = time.time()  # 다음 문장을 위한 시작시간 초기화
+            else: print(f"💬 [중간] {transcript}", end="\r")
+                
+    def _postprocess_worker(self):
+        while True:
+            item = self.postprocess_queue.get()
+            if item is None:
+                break
+            transcript, start_time, end_time = item
+            
+            # 교정, 감정분석 등 느린 API 호출 처리
+            duration = end_time - start_time
+            wps = len(transcript.split()) / duration if duration > 0 else 0
+
+            # 1. 문장 교정
             corrected = self.openai_client.create_response(
-                system_content="면접자의 말투를 유지하며 맞춤법 위주로 교정하며 교정한 내용만 출력하세요.",
-                user_content=text
+                system_content=(
+                    "당신은 면접자의 음성 인식 결과를 맞춤법과 흐름 위주로 교정하는 교정 도우미입니다. "
+                    "사용자의 어투 및 어미를 보존하고, 문법 오류와 앞 뒤 단어와 이어지지 않는 어색한 표현만 자연스럽게 수정하세요."
+                ),
+                user_content=transcript
             )
 
-            # 교정 후 코사인 유사도 저장
-            original_embedding = OpenAIEmbedding(text)
-            corrected_embedding = OpenAIEmbedding(corrected)
-
+            # 2. 유사도 계산
+            original_embedding = OpenAIEmbedding(transcript).response
+            corrected_embedding = OpenAIEmbedding(corrected).response
             similarity = cosine_similarity([original_embedding], [corrected_embedding])[0][0]
 
-            # 감정 추정
-            features = extract_audio_features(filepath, 0, self.chunk_duration)
+
+            # 3. 실시간 감정 분석용 오디오 segment 추출
+            tmp_filename = f"tmp_segment_{int(start_time)}.wav"
+            self._save_recent_audio(tmp_filename, duration)
+
+            lufs = self._calculate_lufs(tmp_filename) # 🔊 LUFS 계산
+
+            audio_features = extract_audio_features(tmp_filename, 0, duration)
+
             emotion_prompt = f"""
-            문장: "{text}"
-            평균 pitch: {features["pitch_mean"]:.1f}Hz, pitch 변화량: {features["pitch_std"]:.2f}
-            평균 에너지: {features["energy_mean"]:.5f}, 에너지 변화량: {features["energy_std"]:.5f}
+            문장: "{transcript}"
+            평균 pitch: {audio_features["pitch_mean"]:.1f}Hz, pitch 변화량: {audio_features["pitch_std"]:.2f}
+            평균 에너지: {audio_features["energy_mean"]:.5f}, 에너지 변화량: {audio_features["energy_std"]:.5f}
             말 빠르기(WPS): {wps:.2f}
             """
-            emotion = self.openai_client.create_response(
-                system_content="이 문장의 감정을 하나의 단어로 추론하세요.",
-                user_content=emotion_prompt
-            )
 
-            print(f"[{emotion}] {corrected}")
+            try:
+                emotion = self.openai_client.create_response(
+                    system_content=(
+                        "당신은 문장의 감정을 분석하는 전문가입니다. "
+                        "텍스트와 음향적 특성을 고려하여 이 문장의 감정을 추론하여 감정 하나의 단어만 출력하세요. 예: 기쁨, 슬픔, 분노, 불안, 놀람, 중립 중 하나"
+                    ),
+                    user_content=emotion_prompt
+                )
 
-            # 저장
-            self.output_sentences.append({
-                "original_sentence": text,
+                if not emotion.strip(): emotion = "중립"
+            except Exception as e:
+                print(f"[감정 분석 실패] {e}")
+                emotion = "중립"
+
+            print(f"🗣️ [최종] [{emotion}] {corrected}")
+
+            # 분석 결과 저장
+            self.sentences.append({
+                "original_sentence": transcript,
                 "corrected_sentence": corrected,
                 "cosine_similarity": similarity,
                 "emotion": emotion,
-                "wps": wps
+                "start": start_time,
+                "end": end_time,
+                "wps": wps,
+                "lufs": lufs
             })
 
-            os.remove(filepath)  # 임시 파일 삭제
+            try: # 임시 파일 삭제
+                os.remove(tmp_filename)
+            except FileNotFoundError:
+                pass 
 
+    def start(self):
+        print("🔧 start() 실행됨")
+
+        self.closed = False
+        
+        print("🔁 오디오 스트림 시작됨")
+        requests = self._audio_generator()
+        responses = self.client.streaming_recognize(self.streaming_config, requests)
+
+        def recognize_loop():
+            self._analyze_audio(responses)
+
+        audio_thread = threading.Thread(target=recognize_loop)
+        audio_thread.start()
+
+        # ESC 감지 루프 대신 리스너가 비동기 동작하므로
+        # 여기서는 closed 상태만 체크하며 대기
+        while not self.closed:
+            time.sleep(0.1)
+
+        audio_thread.join()
+        self.cleanup()
+    
     def stop(self):
-        self.listening = False
-        dump_json(filename="realtime_output", json_data={"interview": self.output_sentences})
-        print("\n🛑 분석 종료. JSON 파일 저장 완료.")
+        print("🛑 중지 함수 호출됨.")
+        self.closed = True
+        self._buff.put(None)
+        self.save_results()
+        self.postprocess_queue.put(None)
+        self.postprocess_thread.join()
+
+    def cleanup(self):
+        print("🧹 리소스 정리 중")
+        if self.audio_stream is not None:
+            self.audio_stream.stop_stream()
+            self.audio_stream.close()
+        if self.audio_interface is not None:
+            self.audio_interface.terminate()
 
 class StaticAudioAnalyzer:
     def __init__(self):
