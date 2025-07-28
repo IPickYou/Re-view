@@ -29,11 +29,17 @@ function App() {
       console.error('비디오 요소가 없습니다!');
       return null;
     }
+  
     const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    canvas.getContext('2d').drawImage(video, 0, 0);
-    return canvas.toDataURL('image/jpeg').split(',')[1]; // base64만 추출
+  
+    const ctx = canvas.getContext('2d');
+    ctx.translate(canvas.width, 0);     // 오른쪽으로 이동
+    ctx.scale(-1, 1);                    // 좌우 반전
+    ctx.drawImage(video, 0, 0);         // 반전된 채로 그리기
+  
+    return canvas.toDataURL('image/jpeg').split(',')[1];
   };
 
   useEffect(() => {
@@ -145,7 +151,7 @@ function App() {
       <h2>📷 웹캠 + 얼굴 분석</h2>
       {isCameraOn && (
         <>
-          <video ref={videoRef} style={{ width: 400, height: 300 }} muted autoPlay playsInline></video>
+          <video ref={videoRef} style={{ width: 400, height: 300, transform: 'scaleX(-1)' }} muted autoPlay playsInline></video>
           <div style={{ marginTop: 10, whiteSpace: 'pre-line', fontFamily: 'monospace' }}>
             <h3>분석 결과</h3>
             <p>👀 Gaze: {analysisResult.gaze || '-'}</p>
