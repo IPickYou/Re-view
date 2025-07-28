@@ -93,7 +93,7 @@ function App() {
         } catch (e) {
           console.error('분석 중 에러:', e);
         }
-      }, 3000);
+      }, 2000);
   
       setIntervalId(id);
     } catch (error) {
