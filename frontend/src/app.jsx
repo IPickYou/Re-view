@@ -6,6 +6,9 @@ function App() {
   const [analysisResult, setAnalysisResult] = useState({});
 
   const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+
+  const landmarks = analysisResult.face_landmarks;
 
   const setupCamera = async () => {
     try {
@@ -13,8 +16,16 @@ function App() {
       console.log("getUserMedia 성공", stream);
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play().catch(e => console.error("video.play() 실패:", e));
-        console.log("videoRef.current:", videoRef.current);
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current.play();
+        
+          const video = videoRef.current;
+          const canvas = canvasRef.current;
+          if (canvas && video) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+          }
+        };
       } else {
         console.error("videoRef.current가 없음");
       }
@@ -139,6 +150,28 @@ function App() {
     };
   }, [intervalId]);
 
+  useEffect(() => {
+    if (!landmarks || !canvasRef.current) return;
+    if (!Array.isArray(landmarks) || landmarks.length === 0) return;
+  
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+  
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "red";
+
+    for (const pt of landmarks) {
+      const x = pt.x * canvas.width;
+      const y = pt.y * canvas.height;
+
+      ctx.beginPath();
+      ctx.arc(x, y, 2, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+  
+    ctx.restore();
+  }, [landmarks]);
+
   return (
     <div>
       <button onClick={startRecognition} disabled={isCameraOn}>
@@ -150,8 +183,9 @@ function App() {
 
       <h2>📷 웹캠 + 얼굴 분석</h2>
       {isCameraOn && (
-        <>
+        <div style={{ position: 'relative', width: 400, height: 300 }}>
           <video ref={videoRef} style={{ width: 400, height: 300, transform: 'scaleX(-1)' }} muted autoPlay playsInline></video>
+          <canvas ref={canvasRef} width={400} height={300} style={{ position: 'absolute', top: 0, left: 0, zIndex: 10, pointerEvents: 'none' }}/>
           <div style={{ marginTop: 10, whiteSpace: 'pre-line', fontFamily: 'monospace' }}>
             <h3>분석 결과</h3>
             <p>👀 Gaze: {analysisResult.gaze || '-'}</p>
@@ -174,7 +208,7 @@ function App() {
               </div>
             )}
           </div>
-        </>
+        </div>
       )}
     </div>
   );

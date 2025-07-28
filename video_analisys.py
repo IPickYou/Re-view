@@ -103,6 +103,17 @@ class VideoAnalyzer:
         if face_result.multi_face_landmarks:
             face_landmarks = face_result.multi_face_landmarks[0]
 
+            landmark_list = []
+            for lm in face_landmarks.landmark:
+                landmark_list.append({
+                    "x": lm.x,
+                    "y": lm.y,
+                    "z": lm.z,
+                    "visibility": getattr(lm, "visibility", 1.0)  # pose에서는 visibility가 있음
+                })
+
+            response["face_landmarks"] = landmark_list
+
             left_outer = face_landmarks.landmark[33].x * w
             left_inner = face_landmarks.landmark[133].x * w
             left_iris_x = np.mean([face_landmarks.landmark[i].x * w for i in range(474, 478)])
