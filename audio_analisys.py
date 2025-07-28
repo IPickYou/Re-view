@@ -4,9 +4,9 @@ from google.cloud import speech
 from pynput import keyboard
 from sklearn.metrics.pairwise import cosine_similarity
 from utils import OpenAIClient, OpenAIEmbedding, dump_json, read_json
+from queue import Queue
 
 import datetime
-import json
 import os
 import pyaudio
 import pyloudnorm as pyln
@@ -39,13 +39,19 @@ CHUNK = int(RATE / 10)  # 100ms
 class RealtimeAudioAnalyzer:
     def __init__(self, language_code="ko-KR"):
         load_dotenv()
+        self.openai_client = OpenAIClient()
 
         self.language_code = language_code
         self._buff = queue.Queue()
         self.closed = True
         self.client = speech.SpeechClient()
         self.streaming_config = self._get_streaming_config()
-        self.sentences = {}
+        self.recent_audio_chunk = []
+        self.sentences = []
+
+        self.postprocess_queue = Queue()
+        self.postprocess_thread = threading.Thread(target=self._postprocess_worker)
+        self.postprocess_thread.start()
 
     def _get_streaming_config(self):
         config = speech.RecognitionConfig(
@@ -61,6 +67,7 @@ class RealtimeAudioAnalyzer:
 
     def _fill_buffer(self, in_data, frame_count, time_info, status_flags):
         self._buff.put(in_data)
+        self.recent_audio_chunk.append(in_data)
         return None, pyaudio.paContinue
 
     def _audio_generator(self):
@@ -73,12 +80,20 @@ class RealtimeAudioAnalyzer:
     def _calculate_lufs(self, wav_file_path):
         data, rate = sf.read(wav_file_path)
         meter = pyln.Meter(rate)
+        if len(data.shape) > 1:  # 스테레오인 경우
+            data = data.mean(axis=1)  # 모노로 변환
+
         loudness = meter.integrated_loudness(data)
         return loudness
 
     def _save_recent_audio(self, filename, duration_sec):
         # 예: self.recent_audio_chunk에 audio bytes 누적 저장
         with wave.open(filename, 'wb') as wf:
+            required_chunks = int(duration_sec * RATE / CHUNK)
+            if len(self.recent_audio_chunk) < required_chunks:
+                print("⚠️ 오디오 버퍼 부족, segment 저장 건너뜀")
+                return
+            
             wf.setnchannels(1)
             wf.setsampwidth(2)  # 16bit PCM
             wf.setframerate(RATE)
@@ -105,64 +120,85 @@ class RealtimeAudioAnalyzer:
 
             if result.is_final:
                 end_time = time.time()
-                duration = end_time - start_time
-                wps = len(transcript.split()) / duration if duration > 0 else 0
+                self.postprocess_queue.put((transcript, start_time, end_time))
+                
+                print(f"💬 [최종] {transcript}", end="\r")
+                start_time = time.time()  # 다음 문장을 위한 시작시간 초기화
+            else: print(f"💬 [중간] {transcript}", end="\r")
+                
+    def _postprocess_worker(self):
+        while True:
+            item = self.postprocess_queue.get()
+            if item is None:
+                break
+            transcript, start_time, end_time = item
+            
+            # 교정, 감정분석 등 느린 API 호출 처리
+            duration = end_time - start_time
+            wps = len(transcript.split()) / duration if duration > 0 else 0
 
-                # 1. 문장 교정
-                corrected = self.openai_client.create_response(
-                    system_content=(
-                        "당신은 면접자의 음성 인식 결과를 맞춤법과 흐름 위주로 교정하는 교정 도우미입니다. "
-                        "사용자의 어투 및 어미를 보존하고, 문법 오류와 앞 뒤 단어와 이어지지 않는 어색한 표현만 자연스럽게 수정하세요."
-                    ),
-                    user_content=transcript
-                )
+            # 1. 문장 교정
+            corrected = self.openai_client.create_response(
+                system_content=(
+                    "당신은 면접자의 음성 인식 결과를 맞춤법과 흐름 위주로 교정하는 교정 도우미입니다. "
+                    "사용자의 어투 및 어미를 보존하고, 문법 오류와 앞 뒤 단어와 이어지지 않는 어색한 표현만 자연스럽게 수정하세요."
+                ),
+                user_content=transcript
+            )
 
-                # 2. 유사도 계산
-                original_embedding = OpenAIEmbedding(transcript)
-                corrected_embedding = OpenAIEmbedding(corrected)
-                similarity = cosine_similarity([original_embedding], [corrected_embedding])[0][0]
+            # 2. 유사도 계산
+            original_embedding = OpenAIEmbedding(transcript).response
+            corrected_embedding = OpenAIEmbedding(corrected).response
+            similarity = cosine_similarity([original_embedding], [corrected_embedding])[0][0]
 
-                # 3. 실시간 감정 분석용 오디오 segment 추출
-                tmp_filename = "tmp_segment.wav"
-                self._save_recent_audio(tmp_filename, duration)
 
-                lufs = self._calculate_lufs(tmp_filename) # 🔊 LUFS 계산
+            # 3. 실시간 감정 분석용 오디오 segment 추출
+            tmp_filename = f"tmp_segment_{int(start_time)}.wav"
+            self._save_recent_audio(tmp_filename, duration)
 
-                audio_features = extract_audio_features(tmp_filename)
+            lufs = self._calculate_lufs(tmp_filename) # 🔊 LUFS 계산
 
-                emotion_prompt = f"""
-                문장: "{transcript}"
-                평균 pitch: {audio_features["pitch_mean"]:.1f}Hz, pitch 변화량: {audio_features["pitch_std"]:.2f}
-                평균 에너지: {audio_features["energy_mean"]:.5f}, 에너지 변화량: {audio_features["energy_std"]:.5f}
-                말 빠르기(WPS): {wps:.2f}
-                """
+            audio_features = extract_audio_features(tmp_filename, 0, duration)
 
+            emotion_prompt = f"""
+            문장: "{transcript}"
+            평균 pitch: {audio_features["pitch_mean"]:.1f}Hz, pitch 변화량: {audio_features["pitch_std"]:.2f}
+            평균 에너지: {audio_features["energy_mean"]:.5f}, 에너지 변화량: {audio_features["energy_std"]:.5f}
+            말 빠르기(WPS): {wps:.2f}
+            """
+
+            try:
                 emotion = self.openai_client.create_response(
                     system_content=(
                         "당신은 문장의 감정을 분석하는 전문가입니다. "
-                        "텍스트와 음향적 특성을 고려하여 이 문장의 감정을 추론하세요. 감정 하나의 단어만 출력하세요."
+                        "텍스트와 음향적 특성을 고려하여 이 문장의 감정을 추론하여 감정 하나의 단어만 출력하세요. 예: 기쁨, 슬픔, 분노, 불안, 놀람, 중립 중 하나"
                     ),
                     user_content=emotion_prompt
                 )
 
-                print(f"🗣️ [최종] [{emotion}] {corrected}")
+                if not emotion.strip(): emotion = "중립"
+            except Exception as e:
+                print(f"[감정 분석 실패] {e}")
+                emotion = "중립"
 
-                # 분석 결과 저장
-                self.sentences.append({
-                    "original_sentence": transcript,
-                    "corrected_sentence": corrected,
-                    "cosine_similarity": similarity,
-                    "emotion": emotion,
-                    "start": start_time,
-                    "end": end_time,
-                    "wps": wps,
-                    "lufs": lufs
-                })
+            print(f"🗣️ [최종] [{emotion}] {corrected}")
 
-                start_time = time.time()  # 다음 문장을 위한 시작시간 초기화
+            # 분석 결과 저장
+            self.sentences.append({
+                "original_sentence": transcript,
+                "corrected_sentence": corrected,
+                "cosine_similarity": similarity,
+                "emotion": emotion,
+                "start": start_time,
+                "end": end_time,
+                "wps": wps,
+                "lufs": lufs
+            })
 
-            else:
-                print(f"💬 [중간] {transcript}", end="\r")
+            try: # 임시 파일 삭제
+                os.remove(tmp_filename)
+            except FileNotFoundError:
+                pass 
 
     def start(self):
         print("🔧 start() 실행됨")
@@ -185,6 +221,9 @@ class RealtimeAudioAnalyzer:
                 self.closed = True
                 audio_stream.stop_stream()
                 self._buff.put(None)
+                self.save_results()
+                self.postprocess_queue.put(None)
+                self.postprocess_thread.join()
                 return False  # 리스너 종료
 
         # 키보드 리스너 실행
