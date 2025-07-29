@@ -11,14 +11,6 @@ function App() {
 
   const faceLandmarks = analysisResult.face_landmarks;
   const poseLandmarks = analysisResult.pose_landmarks;
-
-  const FACE_CONNECTIONS = [
-    [33, 133],  // 왼쪽 눈 바깥 - 안쪽
-    [133, 1],   // 왼쪽 눈 안쪽 - 코
-    [1, 362],   // 코 - 오른쪽 눈 안쪽
-    [362, 263], // 오른쪽 눈 안쪽 - 바깥쪽
-    [61, 291]   // 입 (왼쪽 - 오른쪽)
-  ];
   
   const POSE_CONNECTIONS = [
     [11, 12] // 양 어깨
