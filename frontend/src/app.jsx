@@ -6,6 +6,7 @@ function App() {
   const [analysisResult, setAnalysisResult] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [audioCapture, setAudioCapture] = useState("");
+  const [videoSize, setVideoSize] = useState({ width: 400, height: 300 });
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -278,74 +279,74 @@ function App() {
       <button onClick={getResponse} disabled={!isCameraOn || isLoading}>
         {isLoading ? "기다리는 중..." : isCameraOn ? '인식된 음성 출력하기' : '인식 중이 아닙니다'}
       </button>
-
+  
       <h2>📷 웹캠 + 얼굴 분석</h2>
+  
       {isCameraOn && (
-        <div
-          style={{
-            position: 'relative',
-            width: videoRef.current?.videoWidth || 400,
-            height: videoRef.current?.videoHeight || 300,
-          }}
-        >
-          <video
-            ref={videoRef}
-            style={{ width: '100%', height: '100%', transform: 'scaleX(-1)' }}
-            muted
-            autoPlay
-            playsInline
-          ></video>
-  
-          {/* ✅ width/height 속성만 사용, style에선 제거 */}
-          <canvas
-            ref={canvasRef}
-            width={videoRef.current?.videoWidth || 400}
-            height={videoRef.current?.videoHeight || 300}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              pointerEvents: 'none',
-              zIndex: 10,
-            }}
-          />
-  
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, gap: '20px' }}>
-            {/* 왼쪽: 음성 분석 */}
-            <div style={{ flex: 1, whiteSpace: 'pre-line', fontFamily: 'monospace' }}>
-              <h3>음성 분석 결과</h3>
-              <p>🗣️ 인식된 음성: {audioCapture || '-'}</p>
-            </div>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '20px' }}>
+          {/* 🎥 영상과 캔버스 - 겹쳐서 렌더링 */}
+          <div style={{ position: 'relative', width: `${videoSize.width}px`, height: `${videoSize.height}px`, flexShrink: 0 }}>
+            <video
+              ref={videoRef}
+              style={{ width: '100%', height: '100%', transform: 'scaleX(-1)', display: 'block'}}
+              muted
+              autoPlay
+              playsInline
+              onLoadedMetadata={() => {
+                const video = videoRef.current;
+                if (video) {
+                  setVideoSize({
+                    width: video.videoWidth,
+                    height: video.videoHeight,
+                  });
+                }
+              }}
+            ></video>
 
-            {/* 오른쪽: 영상 분석 */}
-            <div style={{ flex: 1, whiteSpace: 'pre-line', fontFamily: 'monospace' }}>
-              <h3>영상 분석 결과</h3>
-              <p>👀 Gaze: {analysisResult.gaze || '-'}</p>
-              <p>🧍 자세 평가: {analysisResult.shoulder_eval || '-'}</p>
-              <p>
-                📐 어깨 각도:{' '}
-                {analysisResult.shoulder_angle !== undefined ? analysisResult.shoulder_angle.toFixed(1) : '-'}
-              </p>
-              <p>📊 안정성: {analysisResult.jitter_eval || '-'}</p>
-              <p>
-                🎯 중심 시선 비율:{' '}
-                {analysisResult.gaze_center_ratio !== undefined ? analysisResult.gaze_center_ratio.toFixed(1) + '%' : '-'}
-              </p>
-              <p>🔄 시선 이동 횟수: {analysisResult.gaze_shift_count || 0}</p>
-              <p>🔄 자세 변화 횟수: {analysisResult.posture_change_count || 0}</p>
-    
-              {analysisResult.emotions && analysisResult.emotions.length > 0 && (
-                <div style={{ marginTop: 10 }}>
-                  <h3>😊 감정 분석</h3>
-                  {analysisResult.emotions.map((emotionObj, index) => (
-                    <p key={index}>
-                      😃 감정: <strong>{emotionObj.emotion}</strong> (신뢰도: {(emotionObj.confidence * 100).toFixed(1)}%)
-                    </p>
-                  ))}
-                </div>
-              )}
-            </div>
+            <canvas
+              ref={canvasRef}
+              width={videoSize.width}
+              height={videoSize.height}
+              style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', zIndex: 10}}
+            />
           </div>
+  
+          {/* 📊 영상 분석 결과 (오른쪽) */}
+          <div style={{ width: '100%', maxWidth: '400px', whiteSpace: 'pre-line', fontFamily: 'monospace' }}>
+            <h3>영상 분석 결과</h3>
+            <p>👀 Gaze: {analysisResult.gaze || '-'}</p>
+            <p>🧍 자세 평가: {analysisResult.shoulder_eval || '-'}</p>
+            <p>
+              📐 어깨 각도:{' '}
+              {analysisResult.shoulder_angle !== undefined ? analysisResult.shoulder_angle.toFixed(1) : '-'}
+            </p>
+            <p>📊 안정성: {analysisResult.jitter_eval || '-'}</p>
+            <p>
+              🎯 중심 시선 비율:{' '}
+              {analysisResult.gaze_center_ratio !== undefined ? analysisResult.gaze_center_ratio.toFixed(1) + '%' : '-'}
+            </p>
+            <p>🔄 시선 이동 횟수: {analysisResult.gaze_shift_count || 0}</p>
+            <p>🔄 자세 변화 횟수: {analysisResult.posture_change_count || 0}</p>
+  
+            {analysisResult.emotions && analysisResult.emotions.length > 0 && (
+              <div style={{ marginTop: 10 }}>
+                <h3>😊 감정 분석</h3>
+                {analysisResult.emotions.map((emotionObj, index) => (
+                  <p key={index}>
+                    😃 감정: <strong>{emotionObj.emotion}</strong> (신뢰도: {(emotionObj.confidence * 100).toFixed(1)}%)
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+  
+      {/* 🗣️ 음성 분석 결과 (영상 아래쪽, 채팅 스타일) */}
+      {isCameraOn && (
+        <div style={{ marginTop: '20px', padding: '10px', borderTop: '1px solid #ccc', fontFamily: 'monospace', backgroundColor: '#f9f9f9' }}>
+          <h3>음성 분석 결과</h3>
+          <p>🗣️ {audioCapture || '아직 음성이 인식되지 않았습니다.'}</p>
         </div>
       )}
     </div>
