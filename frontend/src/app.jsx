@@ -6,7 +6,7 @@ function App() {
   const [analysisResult, setAnalysisResult] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [audioCapture, setAudioCapture] = useState("");
-  const [videoSize, setVideoSize] = useState({ width: 400, height: 300 });
+  const [videoSize, setVideoSize] = useState({ width: 640, height: 480 });
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -18,7 +18,9 @@ function App() {
 
   const setupCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 960 }, height: { ideal: 540 } }
+      });
       console.log("getUserMedia 성공", stream);
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -309,35 +311,43 @@ function App() {
               height={videoSize.height}
               style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', zIndex: 10}}
             />
-          </div>
-  
-          {/* 📊 영상 분석 결과 (오른쪽) */}
-          <div style={{ width: '100%', maxWidth: '400px', whiteSpace: 'pre-line', fontFamily: 'monospace' }}>
-            <h3>영상 분석 결과</h3>
-            <p>👀 Gaze: {analysisResult.gaze || '-'}</p>
-            <p>🧍 자세 평가: {analysisResult.shoulder_eval || '-'}</p>
-            <p>
-              📐 어깨 각도:{' '}
-              {analysisResult.shoulder_angle !== undefined ? analysisResult.shoulder_angle.toFixed(1) : '-'}
-            </p>
-            <p>📊 안정성: {analysisResult.jitter_eval || '-'}</p>
-            <p>
-              🎯 중심 시선 비율:{' '}
-              {analysisResult.gaze_center_ratio !== undefined ? analysisResult.gaze_center_ratio.toFixed(1) + '%' : '-'}
-            </p>
-            <p>🔄 시선 이동 횟수: {analysisResult.gaze_shift_count || 0}</p>
-            <p>🔄 자세 변화 횟수: {analysisResult.posture_change_count || 0}</p>
-  
-            {analysisResult.emotions && analysisResult.emotions.length > 0 && (
-              <div style={{ marginTop: 10 }}>
-                <h3>😊 감정 분석</h3>
-                {analysisResult.emotions.map((emotionObj, index) => (
-                  <p key={index}>
-                    😃 감정: <strong>{emotionObj.emotion}</strong> (신뢰도: {(emotionObj.confidence * 100).toFixed(1)}%)
-                  </p>
-                ))}
-              </div>
-            )}
+
+            {/* 📊 영상 분석 결과 */}
+            <div style={{ 
+              position: 'absolute', top: 10, left: 10, backgroundColor: 'rgba(0, 0, 0, 0.6)', color: 'white', padding: '10px',
+              borderRadius: '8px', fontSize: '14px', fontFamily: 'monospace', maxWidth: '300px', zIndex: 20
+            }}>
+              <h3>영상 분석 결과</h3>
+              <p>👀 Gaze: {analysisResult.gaze || '-'}</p>
+              <p>🧍 자세 평가: {analysisResult.shoulder_eval || '-'}</p>
+              <p>
+                📐 어깨 각도:{' '}
+                {analysisResult.shoulder_angle !== undefined ? analysisResult.shoulder_angle.toFixed(1) : '-'}
+              </p>
+              <p>📊 안정성: {analysisResult.jitter_eval || '-'}</p>
+              <p>
+                🎯 중심 시선 비율:{' '}
+                {analysisResult.gaze_center_ratio !== undefined ? analysisResult.gaze_center_ratio.toFixed(1) + '%' : '-'}
+              </p>
+              <p>🔄 시선 이동 횟수: {analysisResult.gaze_shift_count || 0}</p>
+              <p>🔄 자세 변화 횟수: {analysisResult.posture_change_count || 0}</p>
+    
+              {/* 신뢰도가 가장 높은 감정 1개만 추출 */}
+              {analysisResult.emotions && analysisResult.emotions.length > 0 && (() => {
+                const topEmotion = analysisResult.emotions.reduce((prev, current) =>
+                  current.confidence > prev.confidence ? current : prev
+                );
+
+                return (
+                  <div style={{ marginTop: 10 }}>
+                    <h3>😊 감정 분석</h3>
+                    <p>
+                      😃 감정: <strong>{topEmotion.emotion}</strong> (신뢰도: {(topEmotion.confidence * 100).toFixed(1)}%)
+                    </p>
+                  </div>
+                );
+              })()}
+            </div>
           </div>
         </div>
       )}
