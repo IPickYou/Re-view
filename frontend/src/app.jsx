@@ -310,35 +310,41 @@ function App() {
             }}
           />
   
-          <div style={{ marginTop: 10, whiteSpace: 'pre-line', fontFamily: 'monospace' }}>
-            <h3>영상 분석 결과</h3>
-            <p>🗣️ 인식된 음성: {audioCapture || '-'}</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, gap: '20px' }}>
+            {/* 왼쪽: 음성 분석 */}
+            <div style={{ flex: 1, whiteSpace: 'pre-line', fontFamily: 'monospace' }}>
+              <h3>음성 분석 결과</h3>
+              <p>🗣️ 인식된 음성: {audioCapture || '-'}</p>
+            </div>
 
-            <h3>영상 분석 결과</h3>
-            <p>👀 Gaze: {analysisResult.gaze || '-'}</p>
-            <p>🧍 자세 평가: {analysisResult.shoulder_eval || '-'}</p>
-            <p>
-              📐 어깨 각도:{' '}
-              {analysisResult.shoulder_angle !== undefined ? analysisResult.shoulder_angle.toFixed(1) : '-'}
-            </p>
-            <p>📊 안정성: {analysisResult.jitter_eval || '-'}</p>
-            <p>
-              🎯 중심 시선 비율:{' '}
-              {analysisResult.gaze_center_ratio !== undefined ? analysisResult.gaze_center_ratio.toFixed(1) + '%' : '-'}
-            </p>
-            <p>🔄 시선 이동 횟수: {analysisResult.gaze_shift_count || 0}</p>
-            <p>🔄 자세 변화 횟수: {analysisResult.posture_change_count || 0}</p>
-  
-            {analysisResult.emotions && analysisResult.emotions.length > 0 && (
-              <div style={{ marginTop: 10 }}>
-                <h3>😊 감정 분석</h3>
-                {analysisResult.emotions.map((emotionObj, index) => (
-                  <p key={index}>
-                    😃 감정: <strong>{emotionObj.emotion}</strong> (신뢰도: {(emotionObj.confidence * 100).toFixed(1)}%)
-                  </p>
-                ))}
-              </div>
-            )}
+            {/* 오른쪽: 영상 분석 */}
+            <div style={{ flex: 1, whiteSpace: 'pre-line', fontFamily: 'monospace' }}>
+              <h3>영상 분석 결과</h3>
+              <p>👀 Gaze: {analysisResult.gaze || '-'}</p>
+              <p>🧍 자세 평가: {analysisResult.shoulder_eval || '-'}</p>
+              <p>
+                📐 어깨 각도:{' '}
+                {analysisResult.shoulder_angle !== undefined ? analysisResult.shoulder_angle.toFixed(1) : '-'}
+              </p>
+              <p>📊 안정성: {analysisResult.jitter_eval || '-'}</p>
+              <p>
+                🎯 중심 시선 비율:{' '}
+                {analysisResult.gaze_center_ratio !== undefined ? analysisResult.gaze_center_ratio.toFixed(1) + '%' : '-'}
+              </p>
+              <p>🔄 시선 이동 횟수: {analysisResult.gaze_shift_count || 0}</p>
+              <p>🔄 자세 변화 횟수: {analysisResult.posture_change_count || 0}</p>
+    
+              {analysisResult.emotions && analysisResult.emotions.length > 0 && (
+                <div style={{ marginTop: 10 }}>
+                  <h3>😊 감정 분석</h3>
+                  {analysisResult.emotions.map((emotionObj, index) => (
+                    <p key={index}>
+                      😃 감정: <strong>{emotionObj.emotion}</strong> (신뢰도: {(emotionObj.confidence * 100).toFixed(1)}%)
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
