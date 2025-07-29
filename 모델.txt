@@ -1,0 +1,7 @@
+
+from transformers import T5ForConditionalGeneration, PreTrainedTokenizerFast
+model_id = "aimer3152/summary_model" 
+tokenizer = PreTrainedTokenizerFast.from_pretrained(model_id)
+model = T5ForConditionalGeneration.from_pretrained(model_id)
+
+
