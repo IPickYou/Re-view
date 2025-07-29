@@ -8,7 +8,20 @@ function App() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
-  const landmarks = analysisResult.face_landmarks;
+  const faceLandmarks = analysisResult.face_landmarks;
+  const poseLandmarks = analysisResult.pose_landmarks;
+
+  const FACE_CONNECTIONS = [
+    [33, 133],  // 왼쪽 눈 바깥 - 안쪽
+    [133, 1],   // 왼쪽 눈 안쪽 - 코
+    [1, 362],   // 코 - 오른쪽 눈 안쪽
+    [362, 263], // 오른쪽 눈 안쪽 - 바깥쪽
+    [61, 291]   // 입 (왼쪽 - 오른쪽)
+  ];
+  
+  const POSE_CONNECTIONS = [
+    [11, 12] // 양 어깨
+  ];
 
   const setupCamera = async () => {
     try {
@@ -22,8 +35,8 @@ function App() {
           const video = videoRef.current;
           const canvas = canvasRef.current;
           if (canvas && video) {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+            canvas.style.width = video.videoWidth + 'px';
+            canvas.style.height = video.videoHeight + 'px';
           }
         };
       } else {
@@ -151,27 +164,109 @@ function App() {
   }, [intervalId]);
 
   useEffect(() => {
-    if (!landmarks || !canvasRef.current) return;
-    if (!Array.isArray(landmarks) || landmarks.length === 0) return;
-  
     const canvas = canvasRef.current;
+    const video = videoRef.current;
+  
+    if (!canvas || !video || !faceLandmarks) return;
+  
     const ctx = canvas.getContext("2d");
   
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "red";
-
-    for (const pt of landmarks) {
-      const x = pt.x * canvas.width;
-      const y = pt.y * canvas.height;
-
-      ctx.beginPath();
-      ctx.arc(x, y, 2, 0, 2 * Math.PI);
-      ctx.fill();
+    // ✅ 실제 비디오 픽셀 기준으로 캔버스 크기 설정
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+    if (!vw || !vh) return; // 비디오 아직 준비 안됐을 수 있음
+  
+    canvas.width = vw;
+    canvas.height = vh;
+  
+    // ✅ 캔버스 초기화 및 좌우 반전
+    ctx.clearRect(0, 0, vw, vh);
+    ctx.save();
+    ctx.translate(vw, 0); // 반전
+    ctx.scale(-1, 1);
+  
+    // 🔧 유틸 함수
+    const drawPoints = (landmarks, indices, color) => {
+      ctx.fillStyle = color;
+      for (const i of indices) {
+        const lm = landmarks[i];
+        if (!lm) continue;
+        const x = (1 - lm.x) * vw;  // 반전!
+        const y = lm.y * vh;
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+    };
+  
+    const drawConnections = (landmarks, connections, color) => {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 3;
+      for (const [i1, i2] of connections) {
+        const p1 = landmarks[i1];
+        const p2 = landmarks[i2];
+        if (!p1 || !p2) continue;
+        const x1 = (1 - p1.x) * vw; // 반전
+        const y1 = p1.y * vh;
+        const x2 = (1 - p2.x) * vw; // 반전
+        const y2 = p2.y * vh;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+    };
+  
+    // ✅ 얼굴 랜드마크
+    if (faceLandmarks.length) {
+      const faceIndices = [33, 133, 474, 475, 476, 477, 362, 263, 469, 470, 471, 472, 1];
+  
+      // 눈 아래쪽 점 제거
+      const leftEyePoints = [474, 475, 476, 477].map(i => ({
+        index: i,
+        y: faceLandmarks[i].y,
+      }));
+      const rightEyePoints = [469, 470, 471, 472].map(i => ({
+        index: i,
+        y: faceLandmarks[i].y,
+      }));
+  
+      const leftEyeBottom = leftEyePoints.reduce((max, p) => (p.y > max.y ? p : max), leftEyePoints[0]);
+      const rightEyeBottom = rightEyePoints.reduce((max, p) => (p.y > max.y ? p : max), rightEyePoints[0]);
+  
+      const filteredFacePoints = faceIndices
+        .filter(i => i !== leftEyeBottom.index && i !== rightEyeBottom.index)
+        .map(i => ({
+          index: i,
+          x: faceLandmarks[i].x,
+          y: faceLandmarks[i].y,
+        }))
+        .sort((a, b) => a.x - b.x); // x좌표 기준 정렬
+  
+      drawPoints(faceLandmarks, filteredFacePoints.map(p => p.index), 'red');
+  
+      const faceConnections = [];
+      for (let i = 0; i < filteredFacePoints.length - 1; i++) {
+        faceConnections.push([filteredFacePoints[i].index, filteredFacePoints[i + 1].index]);
+      }
+      drawConnections(faceLandmarks, faceConnections, 'grey');
+  
+      // ✅ 입 (양 끝점만)
+      const mouthIndices = [61, 291];
+      drawPoints(faceLandmarks, mouthIndices, 'red');
+      drawConnections(faceLandmarks, [[61, 291]], 'grey');
+    }
+  
+    // ✅ 포즈 랜드마크
+    if (poseLandmarks?.length) {
+      const poseIndices = [11, 12];
+      drawPoints(poseLandmarks, poseIndices, 'red');
+      drawConnections(poseLandmarks, POSE_CONNECTIONS, 'grey');
     }
   
     ctx.restore();
-  }, [landmarks]);
-
+  }, [faceLandmarks, poseLandmarks]);
+  
   return (
     <div>
       <button onClick={startRecognition} disabled={isCameraOn}>
@@ -180,22 +275,58 @@ function App() {
       <button onClick={stopRecognition} disabled={!isCameraOn}>
         분석 중지
       </button>
-
+  
       <h2>📷 웹캠 + 얼굴 분석</h2>
       {isCameraOn && (
-        <div style={{ position: 'relative', width: 400, height: 300 }}>
-          <video ref={videoRef} style={{ width: 400, height: 300, transform: 'scaleX(-1)' }} muted autoPlay playsInline></video>
-          <canvas ref={canvasRef} width={400} height={300} style={{ position: 'absolute', top: 0, left: 0, zIndex: 10, pointerEvents: 'none' }}/>
+        <div
+          style={{
+            position: 'relative',
+            width: videoRef.current?.videoWidth || 400,
+            height: videoRef.current?.videoHeight || 300,
+          }}
+        >
+          <video
+            ref={videoRef}
+            style={{ width: '100%', height: '100%', transform: 'scaleX(-1)' }}
+            muted
+            autoPlay
+            playsInline
+          ></video>
+  
+          {/* ✅ width/height 속성만 사용, style에선 제거 */}
+          <canvas
+            ref={canvasRef}
+            width={videoRef.current?.videoWidth || 400}
+            height={videoRef.current?.videoHeight || 300}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              pointerEvents: 'none',
+              zIndex: 10,
+            }}
+          />
+  
           <div style={{ marginTop: 10, whiteSpace: 'pre-line', fontFamily: 'monospace' }}>
             <h3>분석 결과</h3>
             <p>👀 Gaze: {analysisResult.gaze || '-'}</p>
             <p>🧍 자세 평가: {analysisResult.shoulder_eval || '-'}</p>
-            <p>📐 어깨 각도: {analysisResult.shoulder_angle !== undefined ? analysisResult.shoulder_angle.toFixed(1) : '-'}</p>
+            <p>
+              📐 어깨 각도:{' '}
+              {analysisResult.shoulder_angle !== undefined
+                ? analysisResult.shoulder_angle.toFixed(1)
+                : '-'}
+            </p>
             <p>📊 안정성: {analysisResult.jitter_eval || '-'}</p>
-            <p>🎯 중심 시선 비율: {analysisResult.gaze_center_ratio !== undefined ? analysisResult.gaze_center_ratio.toFixed(1) + '%' : '-'}</p>
+            <p>
+              🎯 중심 시선 비율:{' '}
+              {analysisResult.gaze_center_ratio !== undefined
+                ? analysisResult.gaze_center_ratio.toFixed(1) + '%'
+                : '-'}
+            </p>
             <p>🔄 시선 이동 횟수: {analysisResult.gaze_shift_count || 0}</p>
             <p>🔄 자세 변화 횟수: {analysisResult.posture_change_count || 0}</p>
-
+  
             {analysisResult.emotions && analysisResult.emotions.length > 0 && (
               <div style={{ marginTop: 10 }}>
                 <h3>😊 감정 분석</h3>
