@@ -13,6 +13,7 @@ class VideoAnalyzer:
     def __init__(self):
         self.mp_face_mesh = mp.solutions.face_mesh
         self.mp_pose = mp.solutions.pose
+
         self.face_mesh = self.mp_face_mesh.FaceMesh(refine_landmarks=True)
         self.pose = self.mp_pose.Pose()
 
@@ -144,6 +145,17 @@ class VideoAnalyzer:
         # 자세 결과가 있으면
         if pose_result.pose_landmarks:
             landmarks = pose_result.pose_landmarks.landmark
+
+            pose_landmark_list = []
+            for lm in landmarks:
+                pose_landmark_list.append({
+                    "x": lm.x,
+                    "y": lm.y,
+                    "z": lm.z,
+                    "visibility": lm.visibility
+                })
+
+            response["pose_landmarks"] = pose_landmark_list
 
             l_shoulder = [int(landmarks[self.mp_pose.PoseLandmark.LEFT_SHOULDER].x * w),
                           int(landmarks[self.mp_pose.PoseLandmark.LEFT_SHOULDER].y * h)]
