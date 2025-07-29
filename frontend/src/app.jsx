@@ -13,9 +13,7 @@ function App() {
   const faceLandmarks = analysisResult.face_landmarks;
   const poseLandmarks = analysisResult.pose_landmarks;
   
-  const POSE_CONNECTIONS = [
-    [11, 12] // 양 어깨
-  ];
+  const POSE_CONNECTIONS = [ [11, 12] /* 양 어깨 */  ];
 
   const setupCamera = async () => {
     try {
@@ -33,12 +31,10 @@ function App() {
             canvas.style.height = video.videoHeight + 'px';
           }
         };
-      } else {
-        console.error("videoRef.current가 없음");
-      }
-    } catch (e) {
-      console.error('웹캠 연결 실패:', e);
-    }
+      } 
+      else { console.error("videoRef.current가 없음"); }
+    } 
+    catch (e) { console.error('웹캠 연결 실패:', e); }
   };
 
   const captureWebcamImage = async () => {
@@ -61,9 +57,8 @@ function App() {
   };
 
   useEffect(() => {
-    if (isCameraOn) {
-      setupCamera();
-    } else {
+    if (isCameraOn) { setupCamera(); } 
+    else {
       // 정지 처리
       if (videoRef.current && videoRef.current.srcObject) {
         videoRef.current.srcObject.getTracks().forEach(track => track.stop());
@@ -76,13 +71,13 @@ function App() {
     console.log("startRecognition 실행됨");
     try {
       // 1) 서버에 /start 요청 보내기
-      const startRes = await fetch('http://localhost:8000/start', {
-        method: 'POST',
-      });
+      const startRes = await fetch('http://localhost:8000/start', {method: 'POST'});
+
       if (!startRes.ok) {
         console.error('서버 시작 요청 실패:', startRes.status);
         return;
       }
+
       const startData = await startRes.json();
       console.log('서버 시작 응답:', startData);
   
@@ -105,18 +100,15 @@ function App() {
             const result = await res.json();
             setAnalysisResult(result);
             console.log('분석 결과:', result);
-          } else {
-            console.error('분석 실패:', res.status);
-          }
-        } catch (e) {
-          console.error('분석 중 에러:', e);
-        }
+          } 
+          else { console.error('분석 실패:', res.status); }
+        } 
+        catch (e) { console.error('분석 중 에러:', e); }
       }, 2000);
   
       setIntervalId(id);
-    } catch (error) {
-      console.error('Error:', error);
-    }
+    } 
+    catch (error) { console.error('Error:', error); }
   };
 
   const stopRecognition = async () => {
@@ -134,22 +126,18 @@ function App() {
   
     // 서버에 정지 요청 보내기 (필요하면)
     try {
-      const stopRes = await fetch('http://localhost:8000/stop', {
-        method: 'POST',
-      });
-      if (!stopRes.ok) {
-        console.error('서버 정지 요청 실패:', stopRes.status);
-      } else {
-        console.log('서버 정지 완료');
-      }
-    } catch (e) {
-      console.error('서버 정지 요청 중 에러:', e);
-    }
+      const stopRes = await fetch('http://localhost:8000/stop', {method: 'POST'});
+
+      if (!stopRes.ok) { console.error('서버 정지 요청 실패:', stopRes.status); } 
+      else { console.log('서버 정지 완료'); }
+    } 
+    catch (e) { console.error('서버 정지 요청 중 에러:', e); }
   };
 
   useEffect(() => {
     return () => {
       if (intervalId) clearInterval(intervalId);
+
       if (videoRef.current && videoRef.current.srcObject) {
         const tracks = videoRef.current.srcObject.getTracks();
         tracks.forEach(track => track.stop());
@@ -168,6 +156,7 @@ function App() {
     // ✅ 실제 비디오 픽셀 기준으로 캔버스 크기 설정
     const vw = video.videoWidth;
     const vh = video.videoHeight;
+
     if (!vw || !vh) return; // 비디오 아직 준비 안됐을 수 있음
   
     canvas.width = vw;
@@ -184,9 +173,12 @@ function App() {
       ctx.fillStyle = color;
       for (const i of indices) {
         const lm = landmarks[i];
+
         if (!lm) continue;
+
         const x = (1 - lm.x) * vw;  // 반전!
         const y = lm.y * vh;
+
         ctx.beginPath();
         ctx.arc(x, y, 3, 0, 2 * Math.PI);
         ctx.fill();
@@ -199,11 +191,14 @@ function App() {
       for (const [i1, i2] of connections) {
         const p1 = landmarks[i1];
         const p2 = landmarks[i2];
+
         if (!p1 || !p2) continue;
+
         const x1 = (1 - p1.x) * vw; // 반전
         const y1 = p1.y * vh;
         const x2 = (1 - p2.x) * vw; // 반전
         const y2 = p2.y * vh;
+
         ctx.beginPath();
         ctx.moveTo(x1, y1);
         ctx.lineTo(x2, y2);
@@ -216,25 +211,15 @@ function App() {
       const faceIndices = [33, 133, 474, 475, 476, 477, 362, 263, 469, 470, 471, 472, 1];
   
       // 눈 아래쪽 점 제거
-      const leftEyePoints = [474, 475, 476, 477].map(i => ({
-        index: i,
-        y: faceLandmarks[i].y,
-      }));
-      const rightEyePoints = [469, 470, 471, 472].map(i => ({
-        index: i,
-        y: faceLandmarks[i].y,
-      }));
+      const leftEyePoints = [474, 475, 476, 477].map(i => ({index: i, y: faceLandmarks[i].y}));
+      const rightEyePoints = [469, 470, 471, 472].map(i => ({index: i, y: faceLandmarks[i].y}));
   
       const leftEyeBottom = leftEyePoints.reduce((max, p) => (p.y > max.y ? p : max), leftEyePoints[0]);
       const rightEyeBottom = rightEyePoints.reduce((max, p) => (p.y > max.y ? p : max), rightEyePoints[0]);
   
       const filteredFacePoints = faceIndices
         .filter(i => i !== leftEyeBottom.index && i !== rightEyeBottom.index)
-        .map(i => ({
-          index: i,
-          x: faceLandmarks[i].x,
-          y: faceLandmarks[i].y,
-        }))
+        .map(i => ({index: i, x: faceLandmarks[i].x, y: faceLandmarks[i].y}))
         .sort((a, b) => a.x - b.x); // x좌표 기준 정렬
   
       drawPoints(faceLandmarks, filteredFacePoints.map(p => p.index), 'red');
@@ -263,10 +248,9 @@ function App() {
   
   const getResponse = async () => {
     setIsLoading(true);
+
     try {
-      const res = await fetch('http://localhost:8000/flush', {
-        method: 'POST',
-      });
+      const res = await fetch('http://localhost:8000/flush', {method: 'POST'});
       if (!res.ok) {
         console.error("flush 요청 실패:", res.status);
         return;
@@ -276,14 +260,11 @@ function App() {
       if (data.final_text) {
         console.log("🗣️ 인식된 음성: " + data.final_text);
         setAudioCapture(data.final_text)
-      } else {
-        alert("⛔ 인식된 음성이 없습니다.");
-      }
-    } catch (err) {
-      console.error("flush 요청 에러:", err);
-    } finally {
-      setIsLoading(false);
-    }
+      } 
+      else { alert("⛔ 인식된 음성이 없습니다."); }
+    } 
+    catch (err) { console.error("flush 요청 에러:", err); } 
+    finally { setIsLoading(false); }
   };
 
   return (
@@ -332,21 +313,18 @@ function App() {
           <div style={{ marginTop: 10, whiteSpace: 'pre-line', fontFamily: 'monospace' }}>
             <h3>영상 분석 결과</h3>
             <p>🗣️ 인식된 음성: {audioCapture || '-'}</p>
+
             <h3>영상 분석 결과</h3>
             <p>👀 Gaze: {analysisResult.gaze || '-'}</p>
             <p>🧍 자세 평가: {analysisResult.shoulder_eval || '-'}</p>
             <p>
               📐 어깨 각도:{' '}
-              {analysisResult.shoulder_angle !== undefined
-                ? analysisResult.shoulder_angle.toFixed(1)
-                : '-'}
+              {analysisResult.shoulder_angle !== undefined ? analysisResult.shoulder_angle.toFixed(1) : '-'}
             </p>
             <p>📊 안정성: {analysisResult.jitter_eval || '-'}</p>
             <p>
               🎯 중심 시선 비율:{' '}
-              {analysisResult.gaze_center_ratio !== undefined
-                ? analysisResult.gaze_center_ratio.toFixed(1) + '%'
-                : '-'}
+              {analysisResult.gaze_center_ratio !== undefined ? analysisResult.gaze_center_ratio.toFixed(1) + '%' : '-'}
             </p>
             <p>🔄 시선 이동 횟수: {analysisResult.gaze_shift_count || 0}</p>
             <p>🔄 자세 변화 횟수: {analysisResult.posture_change_count || 0}</p>
@@ -356,8 +334,7 @@ function App() {
                 <h3>😊 감정 분석</h3>
                 {analysisResult.emotions.map((emotionObj, index) => (
                   <p key={index}>
-                    😃 감정: <strong>{emotionObj.emotion}</strong> (
-                    신뢰도: {(emotionObj.confidence * 100).toFixed(1)}%)
+                    😃 감정: <strong>{emotionObj.emotion}</strong> (신뢰도: {(emotionObj.confidence * 100).toFixed(1)}%)
                   </p>
                 ))}
               </div>
