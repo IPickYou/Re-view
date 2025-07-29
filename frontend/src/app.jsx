@@ -5,6 +5,7 @@ function App() {
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [analysisResult, setAnalysisResult] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [audioCapture, setAudioCapture] = useState("");
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -273,7 +274,8 @@ function App() {
   
       const data = await res.json();
       if (data.final_text) {
-        alert("🗣️ 인식된 음성: " + data.final_text);
+        console.log("🗣️ 인식된 음성: " + data.final_text);
+        setAudioCapture(data.final_text)
       } else {
         alert("⛔ 인식된 음성이 없습니다.");
       }
@@ -328,7 +330,9 @@ function App() {
           />
   
           <div style={{ marginTop: 10, whiteSpace: 'pre-line', fontFamily: 'monospace' }}>
-            <h3>분석 결과</h3>
+            <h3>영상 분석 결과</h3>
+            <p>🗣️ 인식된 음성: {audioCapture || '-'}</p>
+            <h3>영상 분석 결과</h3>
             <p>👀 Gaze: {analysisResult.gaze || '-'}</p>
             <p>🧍 자세 평가: {analysisResult.shoulder_eval || '-'}</p>
             <p>
