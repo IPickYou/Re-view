@@ -4,6 +4,7 @@ function App() {
   const [intervalId, setIntervalId] = useState(null);
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [analysisResult, setAnalysisResult] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -267,6 +268,30 @@ function App() {
     ctx.restore();
   }, [faceLandmarks, poseLandmarks]);
   
+  const getResponse = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch('http://localhost:8000/flush', {
+        method: 'POST',
+      });
+      if (!res.ok) {
+        console.error("flush 요청 실패:", res.status);
+        return;
+      }
+  
+      const data = await res.json();
+      if (data.final_text) {
+        alert("🗣️ 인식된 음성: " + data.final_text);
+      } else {
+        alert("⛔ 인식된 음성이 없습니다.");
+      }
+    } catch (err) {
+      console.error("flush 요청 에러:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div>
       <button onClick={startRecognition} disabled={isCameraOn}>
@@ -275,7 +300,10 @@ function App() {
       <button onClick={stopRecognition} disabled={!isCameraOn}>
         분석 중지
       </button>
-  
+      <button onClick={getResponse} disabled={!isCameraOn || isLoading}>
+        {isLoading ? "기다리는 중..." : isCameraOn ? '인식된 음성 출력하기' : '인식 중이 아닙니다'}
+      </button>
+
       <h2>📷 웹캠 + 얼굴 분석</h2>
       {isCameraOn && (
         <div

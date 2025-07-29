@@ -73,5 +73,9 @@ def get_video_analyzer():
     global video_analyzer
     return video_analyzer
 
+def get_audio_analyzer():
+    global audio_analyzer
+    return audio_analyzer
+
 if __name__ == "__main__":
     start_recognition()  # ✅ 직접 실행할 때만 동작

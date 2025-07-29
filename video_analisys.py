@@ -7,7 +7,7 @@ import math
 import mediapipe as mp
 import numpy as np
 import threading
-import os
+import time
 
 class VideoAnalyzer:
     def __init__(self):
@@ -58,6 +58,13 @@ class VideoAnalyzer:
     def stop(self):
         print("[VideoAnalyzer] Stopping analysis loop...")
         self.running = False
+
+    def _run_loop(self):
+        print("[VideoAnalyzer] Dummy _run_loop started.")
+        while self.running:
+            # 실제로 이 루프에서 할 일 없을 수도 있음 (예: React에서 이미지 POST 방식이라면)
+            time.sleep(0.1)
+        print("[VideoAnalyzer] Dummy _run_loop ended.")
 
     def update_frame(self, frame):
         with self.lock:
