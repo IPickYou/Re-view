@@ -253,9 +253,9 @@ function App() {
     setIsLoading(true);
 
     try {
-      const res = await fetch('http://localhost:8000/flush', {method: 'POST'});
+      const res = await fetch('http://localhost:8000/analyze-audio', {method: 'POST'});
       if (!res.ok) {
-        console.error("flush 요청 실패:", res.status);
+        console.error("analyze-audio 요청 실패:", res.status);
         return;
       }
   
@@ -266,7 +266,7 @@ function App() {
       } 
       else { alert("⛔ 인식된 음성이 없습니다."); }
     } 
-    catch (err) { console.error("flush 요청 에러:", err); } 
+    catch (err) { console.error("analyze-audio 요청 에러:", err); } 
     finally { setIsLoading(false); }
   };
 

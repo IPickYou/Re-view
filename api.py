@@ -19,7 +19,7 @@ def api_start():
     return response
 
 @app.post("/analyze-frame")
-def analyze(data: ImageData):
+def analyze_frame(data: ImageData):
     video_analyzer = get_video_analyzer()
     if video_analyzer is None:
         raise HTTPException(status_code=503, detail="Video analyzer not initialized")
@@ -28,11 +28,11 @@ def analyze(data: ImageData):
     video_analyzer.update_frame(img)
     return video_analyzer.analyze_latest_frame()
 
-@app.post("/flush")
-def flush_result():
+@app.post("/analyze-audio")
+def analyze_audio():
     audio_analyzer = get_audio_analyzer()
     if audio_analyzer is not None:
-        final_text = audio_analyzer.flush_final_result()
+        final_text = audio_analyzer.get_result()
         return {"final_text": final_text}
     else:
         return {"error": "Audio analyzer is not running."}

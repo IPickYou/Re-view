@@ -216,7 +216,7 @@ class RealtimeAudioAnalyzer:
             except FileNotFoundError:
                 pass 
 
-    def flush_final_result(self, timeout=10):
+    def get_result(self, timeout=10):
         """
         result_text가 비어있으면 최대 timeout초까지 기다렸다가 반환.
         반환 후에는 result_text를 초기화하여 중복 반환 방지.
