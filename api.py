@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from main import decode_base64_image, get_video_analyzer, start_recognition, stop_recognition
+from main import decode_base64_image, get_audio_analyzer, get_video_analyzer, start_recognition, stop_recognition
 from schema import ImageData 
 
 app = FastAPI()
@@ -27,6 +27,15 @@ def analyze(data: ImageData):
     img = decode_base64_image(data.image)
     video_analyzer.update_frame(img)
     return video_analyzer.analyze_latest_frame()
+
+@app.post("/flush")
+def flush_result():
+    audio_analyzer = get_audio_analyzer()
+    if audio_analyzer is not None:
+        final_text = audio_analyzer.flush_final_result()
+        return {"final_text": final_text}
+    else:
+        return {"error": "Audio analyzer is not running."}
 
 @app.post("/stop")
 def api_stop():

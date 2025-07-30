@@ -61,6 +61,8 @@ class RealtimeAudioAnalyzer:
             stream_callback=self._fill_buffer,
         )
 
+        self.current_transcript = ""
+        self.result_text = ""
 
     def _get_streaming_config(self):
         config = speech.RecognitionConfig(
@@ -111,7 +113,7 @@ class RealtimeAudioAnalyzer:
 
     def save_results(self, output_name="stt_analysis"):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"{output_name}_{timestamp}.json"
+        filename = f"{output_name}_{timestamp}"
         dump_json(filename = filename, json_data = {"interview": self.sentences})
 
     def _analyze_audio(self, responses):
@@ -131,9 +133,14 @@ class RealtimeAudioAnalyzer:
                 end_time = time.time()
                 self.postprocess_queue.put((transcript, start_time, end_time))
                 
-                print(f"💬 [최종] {transcript}", end="\r")
+                print(f"💬 [최종] {transcript}", flush=True)
                 start_time = time.time()  # 다음 문장을 위한 시작시간 초기화
-            else: print(f"💬 [중간] {transcript}", end="\r")
+                self.result_text += transcript + " "
+                self.result_text = self.result_text[-500:]  # 최대 길이 유지
+                self.current_transcript = ""  # 🔴 최종이면 중간 내용 초기화    
+            else:
+                self.current_transcript = transcript  # 🟢 중간 텍스트 저장
+                print(f"💬 [중간] {transcript}", flush=True)
                 
     def _postprocess_worker(self):
         while True:
@@ -208,6 +215,20 @@ class RealtimeAudioAnalyzer:
                 os.remove(tmp_filename)
             except FileNotFoundError:
                 pass 
+
+    def flush_final_result(self, timeout=10):
+        """
+        result_text가 비어있으면 최대 timeout초까지 기다렸다가 반환.
+        반환 후에는 result_text를 초기화하여 중복 반환 방지.
+        """
+        waited = 0
+        while not self.result_text and waited < timeout:
+            time.sleep(0.1)
+            waited += 0.1
+        
+        final_text = self.result_text
+        self.result_text = ""  # 반환 후 초기화
+        return final_text
 
     def start(self):
         print("🔧 start() 실행됨")

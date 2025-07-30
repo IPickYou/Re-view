@@ -1,18 +1,23 @@
 # posture
 from collections import deque
+from ultralytics import YOLO
 
 import cv2
 import math
 import mediapipe as mp
 import numpy as np
 import threading
+import time
 
 class VideoAnalyzer:
     def __init__(self):
         self.mp_face_mesh = mp.solutions.face_mesh
         self.mp_pose = mp.solutions.pose
+
         self.face_mesh = self.mp_face_mesh.FaceMesh(refine_landmarks=True)
         self.pose = self.mp_pose.Pose()
+
+        self.yolo_model = YOLO('best.pt')
 
         self.eye_history = deque(maxlen=30)
         self.shoulder_center_history = deque(maxlen=30)
@@ -53,7 +58,13 @@ class VideoAnalyzer:
     def stop(self):
         print("[VideoAnalyzer] Stopping analysis loop...")
         self.running = False
-        self.thread.join()
+
+    def _run_loop(self):
+        print("[VideoAnalyzer] Dummy _run_loop started.")
+        while self.running:
+            # 실제로 이 루프에서 할 일 없을 수도 있음 (예: React에서 이미지 POST 방식이라면)
+            time.sleep(0.1)
+        print("[VideoAnalyzer] Dummy _run_loop ended.")
 
     def update_frame(self, frame):
         with self.lock:
@@ -79,9 +90,37 @@ class VideoAnalyzer:
 
         response = {}
 
+        # ✅ YOLO 감정 분석 추가
+        try:
+            results = self.yolo_model.predict(source=frame, conf=0.3, stream=False, verbose=False)[0]  # 첫 번째 결과
+            emotions = []
+
+            for box, cls, conf in zip(results.boxes.xyxy, results.boxes.cls, results.boxes.conf):
+                emotion = self.yolo_model.names[int(cls)]
+                emotions.append({
+                    "emotion": emotion,
+                    "confidence": float(conf),
+                    "box": [float(coord) for coord in box.tolist()]
+                })
+
+            response["emotions"] = emotions
+        except Exception as e:
+            response["emotion_error"] = str(e)
+
         # 얼굴 메시 결과가 있으면
         if face_result.multi_face_landmarks:
             face_landmarks = face_result.multi_face_landmarks[0]
+
+            landmark_list = []
+            for lm in face_landmarks.landmark:
+                landmark_list.append({
+                    "x": lm.x,
+                    "y": lm.y,
+                    "z": lm.z,
+                    "visibility": getattr(lm, "visibility", 1.0)  # pose에서는 visibility가 있음
+                })
+
+            response["face_landmarks"] = landmark_list
 
             left_outer = face_landmarks.landmark[33].x * w
             left_inner = face_landmarks.landmark[133].x * w
@@ -113,6 +152,17 @@ class VideoAnalyzer:
         # 자세 결과가 있으면
         if pose_result.pose_landmarks:
             landmarks = pose_result.pose_landmarks.landmark
+
+            pose_landmark_list = []
+            for lm in landmarks:
+                pose_landmark_list.append({
+                    "x": lm.x,
+                    "y": lm.y,
+                    "z": lm.z,
+                    "visibility": lm.visibility
+                })
+
+            response["pose_landmarks"] = pose_landmark_list
 
             l_shoulder = [int(landmarks[self.mp_pose.PoseLandmark.LEFT_SHOULDER].x * w),
                           int(landmarks[self.mp_pose.PoseLandmark.LEFT_SHOULDER].y * h)]
