@@ -1,3 +1,4 @@
+beautifulsoup4==4.13.4
 fastapi==0.116.1
 librosa==0.11.0
 mediapipe==0.10.14
@@ -11,6 +12,7 @@ PyAudio==0.2.14
 pydantic==2.11.7
 pyloudnorm==0.1.1
 scikit_learn==1.7.1
+selenium==4.24.0
 soundfile==0.13.1
 torch==2.7.1+cu118
 ultralytics==8.3.170

@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from main import decode_base64_image, get_audio_analyzer, get_video_analyzer, start_recognition, stop_recognition
-from schema import ImageData 
+from main import decode_base64_image, get_audio_analyzer, get_video_analyzer, job_crawling, start_recognition, stop_recognition
+from schema import ImageData, UrlRequest 
 
 app = FastAPI()
 
@@ -12,6 +12,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.post("/crawling")
+def crawl(request: UrlRequest):
+    url = request.url
+    questions = job_crawling(url)
+    return questions
 
 @app.post("/start")
 def api_start():

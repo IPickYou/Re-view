@@ -1,4 +1,5 @@
 from audio_analisys import RealtimeAudioAnalyzer
+from job_crawling import JobCrawler
 from video_analisys import VideoAnalyzer
 
 import base64
@@ -7,11 +8,35 @@ import numpy as np
 import re
 import threading
 
+job_crawler = None
+
 is_running = False # 실행 중복 방지용 플래그
 video_analyzer = None
 audio_analyzer = None
 audio_thread = None
 video_thread = None
+
+# 채용공고 크롤링 함수
+def job_crawling(url):
+    global job_crawler
+
+    job_crawler = JobCrawler()
+
+    print("채용 공고 텍스트 추출 중 ...")
+    job_text = job_crawler.extract_wanted_job_text_selenium(url)
+    if not job_text:
+        print("채용 공고 내용을 찾지 못 했습니다.")
+        return
+
+    print("\n추출된 채용 공고 텍스트 일부 :\n")
+    print(job_text, "\n")
+
+    print("면접 질문 생성 중 ...")
+    questions = job_crawler.generate_interview_questions(job_text)
+    print("\n예상 면접 질문 :\n")
+    print(questions)
+
+    return questions
 
 # 🔊 음성 인식 함수
 def run_audio():

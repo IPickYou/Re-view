@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 
-function App() {
+function Interview() {
   const [intervalId, setIntervalId] = useState(null);
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [analysisResult, setAnalysisResult] = useState({});
@@ -363,4 +363,4 @@ function App() {
   );
 }
 
-export default App;
+export default Interview;
