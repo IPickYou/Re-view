@@ -2,8 +2,8 @@ from audio_utils import extract_audio_features
 from datetime import datetime
 from dotenv import load_dotenv
 from google.cloud import speech
-from pynput import keyboard
 from sklearn.metrics.pairwise import cosine_similarity
+from transformers import T5ForConditionalGeneration, PreTrainedTokenizerFast
 from utils import OpenAIClient, OpenAIEmbedding, dump_json, read_json
 from queue import Queue
 
@@ -157,7 +157,9 @@ class RealtimeAudioAnalyzer:
             corrected = self.openai_client.create_response(
                 system_content=(
                     "당신은 면접자의 음성 인식 결과를 맞춤법과 흐름 위주로 교정하는 교정 도우미입니다. "
-                    "사용자의 어투 및 어미를 보존하고, 문법 오류와 앞 뒤 단어와 이어지지 않는 어색한 표현만 자연스럽게 수정하세요."
+                    "사용자의 문장 구조, 어투 및 어미를 보존하고, 문법 오류와 앞 뒤 단어와 이어지지 않는 어색한 표현만 자연스럽게 수정하세요."
+                    "그리고 답변은 수정사항을 적용한 내용만 응답하세요."
+                    "만약 수정사항이 없는 경우, 원본을 그대로 응답하세요."
                 ),
                 user_content=transcript
             )
@@ -210,6 +212,11 @@ class RealtimeAudioAnalyzer:
                 "wps": wps,
                 "lufs": lufs
             })
+
+            # 텍스트 분석이랑 연계
+            model_id = "aimer3152/summary_model" 
+            tokenizer = PreTrainedTokenizerFast.from_pretrained(model_id)
+            model = T5ForConditionalGeneration.from_pretrained(model_id)
 
             try: # 임시 파일 삭제
                 os.remove(tmp_filename)
