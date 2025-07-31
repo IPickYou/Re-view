@@ -137,11 +137,15 @@ function Interview() {
 
       if (!stopRes.ok) { console.error('서버 정지 요청 실패:', stopRes.status); } 
       else {
-        const data = await stopRes.json(); 
-        localStorage.setItem("resultData", JSON.stringify(data));
-        setTimeout(() => {
-          navigate("/result");
-        }, 0); 
+        const data = await stopRes.json();
+        navigate("/result", {
+          state: {
+            interview: data,
+            analysisResult,
+            questions,
+            chatAnswers,
+          }
+        });
       }
     } 
     catch (e) { console.error('서버 정지 요청 중 에러:', e); }
@@ -313,11 +317,11 @@ function Interview() {
   
       {isCameraOn && (
         <div style={{ display: 'flex', justifyContent: 'center', gap: '20px' }}>
-          {/* 🎥 영상과 캔버스 - 겹쳐서 렌더링 */}
+          {/* 🎥 영상 + 분석 (왼쪽) */}
           <div style={{ position: 'relative', width: `${videoSize.width}px`, height: `${videoSize.height}px`, flexShrink: 0 }}>
             <video
               ref={videoRef}
-              style={{ width: '100%', height: '100%', transform: 'scaleX(-1)', display: 'block'}}
+              style={{ width: '100%', height: '100%', transform: 'scaleX(-1)', display: 'block' }}
               muted
               autoPlay
               playsInline
@@ -336,46 +340,65 @@ function Interview() {
               ref={canvasRef}
               width={videoSize.width}
               height={videoSize.height}
-              style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', zIndex: 10}}
+              style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', zIndex: 10 }}
             />
 
-            {/* 📊 영상 분석 결과 */}
-            <div style={{ 
-              position: 'absolute', top: 10, left: 10, backgroundColor: 'rgba(0, 0, 0, 0.6)', color: 'white', padding: '10px',
-              borderRadius: '8px', fontSize: '14px', fontFamily: 'monospace', maxWidth: '300px', zIndex: 20
+            {/* 📊 분석 결과 UI (왼쪽 위) */}
+            <div style={{
+              position: 'absolute', top: 10, left: 10,
+              backgroundColor: 'rgba(0, 0, 0, 0.6)', color: 'white',
+              padding: '10px', borderRadius: '8px', fontSize: '14px',
+              fontFamily: 'monospace', maxWidth: '300px', zIndex: 20
             }}>
               <h3>영상 분석 결과</h3>
               <p>👀 Gaze: {analysisResult.gaze || '-'}</p>
               <p>🧍 자세 평가: {analysisResult.shoulder_eval || '-'}</p>
-              <p>
-                📐 어깨 각도:{' '}
-                {analysisResult.shoulder_angle !== undefined ? analysisResult.shoulder_angle.toFixed(1) : '-'}
-              </p>
+              <p>📐 어깨 각도: {analysisResult.shoulder_angle !== undefined ? analysisResult.shoulder_angle.toFixed(1) : '-'}</p>
               <p>📊 안정성: {analysisResult.jitter_eval || '-'}</p>
-              <p>
-                🎯 중심 시선 비율:{' '}
-                {analysisResult.gaze_center_ratio !== undefined ? analysisResult.gaze_center_ratio.toFixed(1) + '%' : '-'}
-              </p>
+              <p>🎯 중심 시선 비율: {analysisResult.gaze_center_ratio !== undefined ? analysisResult.gaze_center_ratio.toFixed(1) + '%' : '-'}</p>
               <p>🔄 시선 이동 횟수: {analysisResult.gaze_shift_count || 0}</p>
               <p>🔄 자세 변화 횟수: {analysisResult.posture_change_count || 0}</p>
-    
-              {/* 신뢰도가 가장 높은 감정 1개만 추출 */}
+
+              {/* 감정 분석 요약 (텍스트만) */}
               {analysisResult.emotions && analysisResult.emotions.length > 0 && (() => {
                 const topEmotion = analysisResult.emotions.reduce((prev, current) =>
                   current.confidence > prev.confidence ? current : prev
                 );
-
                 return (
                   <div style={{ marginTop: 10 }}>
                     <h3>😊 감정 분석</h3>
-                    <p>
-                      😃 감정: <strong>{topEmotion.emotion}</strong> (신뢰도: {(topEmotion.confidence * 100).toFixed(1)}%)
-                    </p>
+                    <p>😃 감정: <strong>{topEmotion.emotion}</strong> (신뢰도: {(topEmotion.confidence * 100).toFixed(1)}%)</p>
                   </div>
                 );
               })()}
             </div>
           </div>
+
+          {/* ⚠️ 감정 경고 (오른쪽) */}
+          {analysisResult.emotions && analysisResult.emotions.length > 0 && (() => {
+            const topEmotion = analysisResult.emotions.reduce((prev, current) =>
+              current.confidence > prev.confidence ? current : prev
+            );
+            const isWarning = topEmotion.emotion === "부정" || topEmotion.emotion === "긴장";
+            if (!isWarning) return null;
+
+            return (
+              <div style={{
+                backgroundColor: 'rgba(255, 0, 0, 0.75)',
+                color: 'white',
+                padding: '20px',
+                borderRadius: '10px',
+                fontSize: '16px',
+                fontFamily: 'monospace',
+                width: '300px',
+                height: 'fit-content',
+                alignSelf: 'flex-start'
+              }}>
+                <h3>⚠️ 감정 경고</h3>
+                <p>현재 감정이 <strong>{topEmotion.emotion}</strong>입니다.<br />표정에 주의해주세요.</p>
+              </div>
+            );
+          })()}
         </div>
       )}
   
