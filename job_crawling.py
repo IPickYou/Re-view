@@ -7,6 +7,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from utils import OpenAIClient
 
+import re
 import time
 
 class JobCrawler:
@@ -72,12 +73,36 @@ class JobCrawler:
         prompt = f"""
         다음은 채용 공고 내용입니다. 이 내용을 바탕으로 면접관이 물어볼 수 있는 질문을 5~10개 예상해 주세요.
         구체적으로, 업무 수행 능력, 역량, 성향, 지원 동기, 경험 중심의 질문 위주로 작성해 주세요.
-        그리고 응답할 때 에는 예상 질문만 응답하세요.
+        그리고 응답할 때는 예상 질문 문장만 응답하세요.
 
         [채용 공고]
         {job_text}
 
         [예상 면접 질문]
+        """
+        response = self.openai_client.create_response(
+            user_content = prompt,
+            temperature = 0.7
+        )
+        return response
+    
+    def extract_text(self, text):
+        # 숫자+점+공백으로 시작하는 부분을 기준으로 split
+        res = re.split(r'\d+\.\s*', text.strip())
+        # 첫 번째 요소는 빈 문자열일 수 있으니 제거
+        res = [q.strip() for q in res if q.strip()]
+        return res
+    
+    def generate_interview_answers(self, questions):
+        prompt = f"""
+        다음은 면접 예상 질문입니다. 이 내용을 바탕으로 면접관이 만족할 수 있는 모범답안들을 예상해 주세요.
+        구체적으로, 질문에 담긴 업무 수행 능력, 역량, 성향, 지원 동기, 경험을 키워드로 문맥에 맞게 작성해 주세요.
+        그리고 응답할 때는 예상 답변 문장만 응답하세요.
+
+        [예상 면접 질문]
+        {chr(10).join(f"{i+1}. {q}" for i, q in enumerate(questions))}
+
+        [모범 답안]
         """
         response = self.openai_client.create_response(
             user_content = prompt,

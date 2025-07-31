@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 
 function Job() {
     const [url, setUrl] = useState('');
+    const [loading, setLoading] = useState(false);
 
     const handleUrlChange = (e) => { setUrl(e.target.value); }; // URL 입력처리
 
     // 크롤링
     const handleUrlSubmit = async () => {
+        setLoading(true);
         try {
             const res = await fetch('http://localhost:8000/crawling', {
                 method: 'POST',
@@ -16,29 +18,58 @@ function Job() {
         
             if (!res.ok) {
                 console.error('서버 시작 요청 실패:', res.status);
+                setLoading(false);
                 return;
             }
 
             const data = await res.json();  // 응답을 JSON으로 파싱
-            console.log(data);  // 응답 확인
-            alert(data);  // 알림 출력
+            console.log(data.questions);
+            console.log(data.answers);
         } 
         catch (error) { console.error('Error:', error); }
+        finally { setLoading(false); }
     };
 
     return (
-        <div style={styles.container}>
-            <div style={styles.inputContainer}>
-                <input 
-                    type="url" 
-                    value={url} 
-                    onChange={handleUrlChange} 
-                    placeholder="URL을 입력하세요" 
-                    style={styles.input}
-                />
-                <button onClick={handleUrlSubmit} style={styles.button}>등록</button>
+        <>
+            <style>
+            {`
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+            .spinner {
+                width: 22px;
+                height: 22px;
+                border: 3px solid #f3f3f3; /* 연한 회색 */
+                border-top: 3px solid #00aaff; /* 버튼 배경과 대비 좋은 밝은 파랑 */
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+                margin: 0 auto;
+            }
+            `}
+            </style>
+
+            <div style={styles.container}>
+                <div style={styles.inputContainer}>
+                    <input 
+                        type="url" 
+                        value={url} 
+                        onChange={handleUrlChange} 
+                        placeholder="URL을 입력하세요" 
+                        style={styles.input}
+                        disabled={loading}
+                    />
+                    <button
+                        onClick={handleUrlSubmit}
+                        style={{ ...styles.button, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}
+                        disabled={loading}
+                    >
+                        {loading ? <div className="spinner"></div> : '등록'}
+                    </button>
+                </div>
             </div>
-        </div>
+        </>
     );
 }
 
@@ -73,8 +104,10 @@ const styles = {
         color: 'white',
         border: 'none',
         borderRadius: '5px',
-        cursor: 'pointer',
-    },
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+    }
 };
 
 export default Job;

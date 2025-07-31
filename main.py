@@ -22,21 +22,22 @@ def job_crawling(url):
 
     job_crawler = JobCrawler()
 
-    print("채용 공고 텍스트 추출 중 ...")
     job_text = job_crawler.extract_wanted_job_text_selenium(url)
     if not job_text:
         print("채용 공고 내용을 찾지 못 했습니다.")
         return
 
-    print("\n추출된 채용 공고 텍스트 일부 :\n")
-    print(job_text, "\n")
-
-    print("면접 질문 생성 중 ...")
     questions = job_crawler.generate_interview_questions(job_text)
-    print("\n예상 면접 질문 :\n")
+    questions = job_crawler.extract_text(questions)
+    print("\n예상 면접 질문 :")
     print(questions)
 
-    return questions
+    answers = job_crawler.generate_interview_answers(questions)
+    answers = job_crawler.extract_text(answers)
+    print("\n예상 면접 답변 :")
+    print(answers)
+
+    return {"questions": questions, "answers": answers}
 
 # 🔊 음성 인식 함수
 def run_audio():
