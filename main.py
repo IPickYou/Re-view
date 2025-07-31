@@ -79,7 +79,9 @@ def stop_recognition():
     if is_running:
         if audio_analyzer:
             audio_analyzer.stop()
+            result = audio_analyzer.save_results()
             audio_analyzer = None
+        else: result = {"interview": []} 
 
         if video_analyzer:
             video_analyzer.stop()
@@ -94,7 +96,7 @@ def stop_recognition():
             video_thread = None
 
         is_running = False
-        return {"status": "Recognition stopped"}
+        return result
     else: return {"status": "Not running"}
 
 def decode_base64_image(base64_str):

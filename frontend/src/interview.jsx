@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 function Interview() {
   const [intervalId, setIntervalId] = useState(null);
@@ -21,6 +21,8 @@ function Interview() {
   const poseLandmarks = analysisResult.pose_landmarks;
   
   const POSE_CONNECTIONS = [ [11, 12] /* 양 어깨 */  ];
+
+  const navigate = useNavigate();
 
   const setupCamera = async () => {
     try {
@@ -134,7 +136,13 @@ function Interview() {
       const stopRes = await fetch('http://localhost:8000/stop', {method: 'POST'});
 
       if (!stopRes.ok) { console.error('서버 정지 요청 실패:', stopRes.status); } 
-      else { console.log('서버 정지 완료'); }
+      else {
+        const data = await stopRes.json(); 
+        localStorage.setItem("resultData", JSON.stringify(data));
+        setTimeout(() => {
+          navigate("/result");
+        }, 0); 
+      }
     } 
     catch (e) { console.error('서버 정지 요청 중 에러:', e); }
   };
