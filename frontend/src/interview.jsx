@@ -295,13 +295,10 @@ function Interview() {
   return (
     <div>
       <button onClick={startRecognition} disabled={isCameraOn}>
-        {isCameraOn ? '분석 중...' : '음성/영상 인식 시작'}
+        {isCameraOn ? '분석 중...' : '면접 시작'}
       </button>
       <button onClick={stopRecognition} disabled={!isCameraOn}>
-        분석 중지
-      </button>
-      <button onClick={getResponse} disabled={!isCameraOn || isLoading}>
-        {isLoading ? "기다리는 중..." : isCameraOn ? '인식된 음성 출력하기' : '인식 중이 아닙니다'}
+        면접 종료
       </button>
   
       <h2>📷 웹캠 + 얼굴 분석</h2>
@@ -401,8 +398,32 @@ function Interview() {
           </div>
 
           {/* 현재 답변 */}
-          <div style={{ padding: '10px', backgroundColor: '#e1ffe1', borderRadius: '6px', minHeight: '40px' }}>
+          <div style={{ 
+            padding: '10px', 
+            backgroundColor: '#e1ffe1', 
+            borderRadius: '6px', 
+            minHeight: '40px', 
+            marginBottom: '10px' 
+          }}>
             🗣️ {chatAnswers[currentQuestionIndex] || "아직 답변이 인식되지 않았습니다."}
+          </div>
+
+          {/* ⬇️ 인식된 음성 출력 버튼 - 현재 답변 아래에 위치 */}
+          <div style={{ marginBottom: '20px' }}>
+            <button 
+              onClick={getResponse} 
+              disabled={!isCameraOn || isLoading}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#4CAF50',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: isCameraOn && !isLoading ? 'pointer' : 'not-allowed'
+              }}
+            >
+              {isLoading ? "기다리는 중..." : "🎤 답변 완료"}
+            </button>
           </div>
 
           {/* 이전 질문들 히스토리 */}
