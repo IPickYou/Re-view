@@ -14,7 +14,7 @@ class OpenAIClient:
     def __getattr__(self, name):
         return getattr(self.client, name) # self.client가 가지고 있는 속성이나 메서드를 직접 사용할 수 있게 위임
     
-    def create_response(self, model = 'gpt-4.1', system_content = '', user_content = ''):
+    def create_response(self, model = 'gpt-4.1', system_content = '', user_content = '', temperature = 1.0):
         response = self.chat.completions.create(
             model=model,
             messages=[
@@ -23,7 +23,8 @@ class OpenAIClient:
                     "content": system_content
                 },
                 {"role": "user", "content": user_content}
-            ]
+            ],
+            temperature = temperature
         )
         return response.choices[0].message.content.strip()
     

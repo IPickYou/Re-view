@@ -2,8 +2,8 @@ from audio_utils import extract_audio_features
 from datetime import datetime
 from dotenv import load_dotenv
 from google.cloud import speech
-from pynput import keyboard
 from sklearn.metrics.pairwise import cosine_similarity
+from transformers import T5ForConditionalGeneration, PreTrainedTokenizerFast
 from utils import OpenAIClient, OpenAIEmbedding, dump_json, read_json
 from queue import Queue
 
@@ -21,7 +21,7 @@ import whisper
 """
 ### 음성 분석의 정상범위 평가 기준
 - 소리 크기 : –23 LUFS ± 1.0
-- 말 빠르기 : 129.7 ± 25.9 WPM WPM(≈ 1.73 ~ 2.59 WPS)
+- 말 빠르기 : 129.7 ± 25.9 WPM (≈ 1.73 ~ 2.59 WPS)
 
 ### 평가 기준 근거
 - 소리 크기
@@ -61,6 +61,8 @@ class RealtimeAudioAnalyzer:
             stream_callback=self._fill_buffer,
         )
 
+        self.current_transcript = ""
+        self.result_text = ""
 
     def _get_streaming_config(self):
         config = speech.RecognitionConfig(
@@ -131,9 +133,14 @@ class RealtimeAudioAnalyzer:
                 end_time = time.time()
                 self.postprocess_queue.put((transcript, start_time, end_time))
                 
-                print(f"💬 [최종] {transcript}", end="\r")
+                print(f"💬 [최종] {transcript}", flush=True)
                 start_time = time.time()  # 다음 문장을 위한 시작시간 초기화
-            else: print(f"💬 [중간] {transcript}", end="\r")
+                self.result_text += transcript + " "
+                self.result_text = self.result_text[-500:]  # 최대 길이 유지
+                self.current_transcript = ""  # 🔴 최종이면 중간 내용 초기화    
+            else:
+                self.current_transcript = transcript  # 🟢 중간 텍스트 저장
+                print(f"💬 [중간] {transcript}", flush=True)
                 
     def _postprocess_worker(self):
         while True:
@@ -150,7 +157,9 @@ class RealtimeAudioAnalyzer:
             corrected = self.openai_client.create_response(
                 system_content=(
                     "당신은 면접자의 음성 인식 결과를 맞춤법과 흐름 위주로 교정하는 교정 도우미입니다. "
-                    "사용자의 어투 및 어미를 보존하고, 문법 오류와 앞 뒤 단어와 이어지지 않는 어색한 표현만 자연스럽게 수정하세요."
+                    "사용자의 문장 구조, 어투 및 어미를 보존하고, 문법 오류와 앞 뒤 단어와 이어지지 않는 어색한 표현만 자연스럽게 수정하세요."
+                    "그리고 답변은 수정사항을 적용한 내용만 응답하세요."
+                    "만약 수정사항이 없는 경우, 원본을 그대로 응답하세요."
                 ),
                 user_content=transcript
             )
@@ -204,10 +213,29 @@ class RealtimeAudioAnalyzer:
                 "lufs": lufs
             })
 
+            # 텍스트 분석이랑 연계
+            model_id = "aimer3152/summary_model" 
+            tokenizer = PreTrainedTokenizerFast.from_pretrained(model_id)
+            model = T5ForConditionalGeneration.from_pretrained(model_id)
+
             try: # 임시 파일 삭제
                 os.remove(tmp_filename)
             except FileNotFoundError:
                 pass 
+
+    def get_result(self, timeout=10):
+        """
+        result_text가 비어있으면 최대 timeout초까지 기다렸다가 반환.
+        반환 후에는 result_text를 초기화하여 중복 반환 방지.
+        """
+        waited = 0
+        while not self.result_text and waited < timeout:
+            time.sleep(0.1)
+            waited += 0.1
+        
+        final_text = self.result_text
+        self.result_text = ""  # 반환 후 초기화
+        return final_text
 
     def start(self):
         print("🔧 start() 실행됨")
