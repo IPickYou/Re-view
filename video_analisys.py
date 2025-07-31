@@ -17,7 +17,7 @@ class VideoAnalyzer:
         self.face_mesh = self.mp_face_mesh.FaceMesh(refine_landmarks=True)
         self.pose = self.mp_pose.Pose()
 
-        self.yolo_model = YOLO('best.pt')
+        self.yolo_model = YOLO('bestbest.pt')
 
         self.eye_history = deque(maxlen=30)
         self.shoulder_center_history = deque(maxlen=30)
