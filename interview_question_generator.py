@@ -178,26 +178,28 @@ class QuestionGenerator:
             print(f"LLM 질문 생성 중 오류 발생: {e}")
             return []
         
-    def generate(self):
-        # --- 1. CSV 파일에서 DataFrame 로드 (이 부분은 사용자가 이미 가지고 있다고 가정) ---
-        csv_file_path = 'questions.csv' # 실제 CSV 파일 경로로 변경하세요.
+    def cluster_df(self):
+        csv_file_path = 'questions.csv'
         try:
             df_questions = pd.read_csv(csv_file_path)
             if 'question_text' not in df_questions.columns:
-                print("오류: CSV 파일에 'question_text' 컬럼이 없습니다. 스크립트를 종료합니다.")
+                print("오류: CSV 파일에 'question_text' 컬럼이 없습니다.")
                 exit()
-            print(f"'{csv_file_path}' 파일에서 {len(df_questions)}개의 질문을 로드했습니다.")
-        except FileNotFoundError:
-            print(f"오류: '{csv_file_path}' 파일을 찾을 수 없습니다. 스크립트를 종료합니다.")
-            exit()
+            print(f"'{csv_file_path}'에서 {len(df_questions)}개 질문을 로드했습니다.")
         except Exception as e:
-            print(f"CSV 파일 로드 중 오류 발생: {e}. 스크립트를 종료합니다.")
+            print(f"CSV 파일 로드 실패: {e}")
             exit()
 
-        # --- 2. DataFrame을 사용하여 질문 군집화 ---
-        num_clusters_to_use = 7 # 군집화 및 생성에 사용할 클러스터 개수 (추천: 5~10)
-        print(f"\n질문을 {num_clusters_to_use}개 클러스터로 군집화 중...")
-        clustered_data_df = self.get_clustered_dataframe(df_questions, num_clusters=num_clusters_to_use)
+        # 군집화 실행
+        num_clusters_to_use = 7
+        print(f"\n{num_clusters_to_use}개 클러스터로 질문 군집화 중...")
+        clustered_data_df = get_clustered_dataframe(df_questions, num_clusters=num_clusters_to_use)
+        clustered_data_df.to_csv("question_clustered.csv")
+
+    def generate(self):
+        # --- 1. CSV 파일에서 DataFrame 로드 (이 부분은 사용자가 이미 가지고 있다고 가정) ---
+        csv_file_path = 'question_clustered.csv' # 실제 CSV 파일 경로로 변경하세요.
+        clustered_data_df = pd.read_csv(csv_file_path)
 
         if not clustered_data_df.empty:
             # --- 3. LangChain LLM 초기화 및 각 클러스터에서 새로운 질문 생성 ---
@@ -207,6 +209,7 @@ class QuestionGenerator:
                 llm = ChatOpenAI(model="gpt-4o", temperature=0.7, max_tokens=500) # 질문 생성에 적합한 모델과 설정
 
                 all_generated_questions = {}
+                num_clusters_to_use = 7
                 for cluster_id in range(num_clusters_to_use):
                     generated_q_list = self.generate_new_questions_for_cluster(
                         cluster_id=cluster_id,
