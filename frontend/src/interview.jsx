@@ -11,6 +11,8 @@ function Interview() {
 
   const location = useLocation();
   const { questions, answers } = location.state || {};
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [chatAnswers, setChatAnswers] = useState(Array(questions?.length || 0).fill(""));
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -268,9 +270,27 @@ function Interview() {
   };
 
   useEffect(() => {
-    console.log("📦 전달된 질문:", questions);
-    console.log("📦 전달된 답변:", answers);
-  }, [questions, answers]);
+    if (!audioCapture) return;
+    setChatAnswers(prev => {
+      const updated = [...prev];
+      updated[currentQuestionIndex] = audioCapture;
+      return updated;
+    });
+  }, [audioCapture, currentQuestionIndex]);
+
+  const prevQuestion = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(prev => prev - 1);
+      setAudioCapture("");  // 이동 시 음성 결과 초기화
+    }
+  };
+
+  const nextQuestion = () => {
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
+      setAudioCapture("");  // 다음 질문에서 초기화
+    }
+  };
 
   return (
     <div>
@@ -354,11 +374,46 @@ function Interview() {
         </div>
       )}
   
-      {/* 🗣️ 음성 분석 결과 (영상 아래쪽, 채팅 스타일) */}
+      {/* 🎤 챗봇 인터뷰 UI */}
       {isCameraOn && (
-        <div style={{ marginTop: '20px', padding: '10px', borderTop: '1px solid #ccc', fontFamily: 'monospace', backgroundColor: '#f9f9f9' }}>
-          <h3>음성 분석 결과</h3>
-          <p>🗣️ {audioCapture || '아직 음성이 인식되지 않았습니다.'}</p>
+        <div style={{ marginTop: '30px', fontFamily: 'monospace', padding: '10px', backgroundColor: '#f0f0f0', borderRadius: '8px' }}>
+          <h3>📝 인터뷰 진행</h3>
+          
+          {/* 질문 이동 버튼 */}
+          <button
+            onClick={prevQuestion}
+            disabled={currentQuestionIndex === 0}
+            style={{ marginRight: '10px', marginBottom: '10px', padding: '8px 16px' }}
+          >
+            이전 질문으로 이동
+          </button>
+          <button
+            onClick={nextQuestion}
+            disabled={currentQuestionIndex >= questions.length - 1}
+            style={{ marginBottom: '10px', padding: '8px 16px' }}
+          >
+            다음 질문으로 이동
+          </button>
+
+          {/* 현재 질문 */}
+          <div style={{ padding: '10px', backgroundColor: '#fff', border: '1px solid #ccc', borderRadius: '6px', marginBottom: '10px' }}>
+            <strong>Q{currentQuestionIndex + 1}.</strong> {questions[currentQuestionIndex]}
+          </div>
+
+          {/* 현재 답변 */}
+          <div style={{ padding: '10px', backgroundColor: '#e1ffe1', borderRadius: '6px', minHeight: '40px' }}>
+            🗣️ {chatAnswers[currentQuestionIndex] || "아직 답변이 인식되지 않았습니다."}
+          </div>
+
+          {/* 이전 질문들 히스토리 */}
+          <div style={{ marginTop: '20px' }}>
+            {questions.slice(0, currentQuestionIndex).map((q, i) => (
+              <div key={i} style={{ marginBottom: '8px' }}>
+                <div><strong>Q{i + 1}.</strong> {q}</div>
+                <div style={{ marginLeft: 10, color: '#333' }}>{chatAnswers[i] || <i>답변 없음</i>}</div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
