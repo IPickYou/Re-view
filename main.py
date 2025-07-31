@@ -1,4 +1,5 @@
 from audio_analisys import RealtimeAudioAnalyzer
+from interview_question_generator import QuestionGenerator
 from job_crawling import JobCrawler
 from video_analisys import VideoAnalyzer
 
@@ -9,6 +10,7 @@ import re
 import threading
 
 job_crawler = None
+question_generator = None
 
 is_running = False # 실행 중복 방지용 플래그
 video_analyzer = None
@@ -19,16 +21,22 @@ video_thread = None
 # 채용공고 크롤링 함수
 def job_crawling(url):
     global job_crawler
+    global question_generator
 
     job_crawler = JobCrawler()
+    question_generator = QuestionGenerator()
 
     job_text = job_crawler.extract_wanted_job_text_selenium(url)
     if not job_text:
         print("채용 공고 내용을 찾지 못 했습니다.")
         return
 
-    questions = job_crawler.generate_interview_questions(job_text)
-    questions = job_crawler.extract_text(questions)
+    questions = []
+    crawl_questions = job_crawler.generate_interview_questions(job_text)
+    crawl_questions = job_crawler.extract_text(crawl_questions)
+    gen_questions = question_generator.generate()
+    questions.extend(crawl_questions[:min(5, len(crawl_questions))])
+    questions.extend(gen_questions[:min(5, len(gen_questions))])
     print("\n예상 면접 질문 :")
     print(questions)
 
