@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { useLocation } from "react-router-dom";
 
 function Interview() {
   const [intervalId, setIntervalId] = useState(null);
@@ -7,6 +8,9 @@ function Interview() {
   const [isLoading, setIsLoading] = useState(false);
   const [audioCapture, setAudioCapture] = useState("");
   const [videoSize, setVideoSize] = useState({ width: 640, height: 480 });
+
+  const location = useLocation();
+  const { questions, answers } = location.state || {};
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -269,6 +273,11 @@ function Interview() {
     catch (err) { console.error("analyze-audio 요청 에러:", err); } 
     finally { setIsLoading(false); }
   };
+
+  useEffect(() => {
+    console.log("📦 전달된 질문:", questions);
+    console.log("📦 전달된 답변:", answers);
+  }, [questions, answers]);
 
   return (
     <div>

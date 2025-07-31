@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import { useNavigate } from "react-router-dom";
 
 function Job() {
     const [url, setUrl] = useState('');
     const [loading, setLoading] = useState(false);
 
     const handleUrlChange = (e) => { setUrl(e.target.value); }; // URL 입력처리
+    const navigate = useNavigate();
 
     // 크롤링
     const handleUrlSubmit = async () => {
@@ -23,8 +25,7 @@ function Job() {
             }
 
             const data = await res.json();  // 응답을 JSON으로 파싱
-            console.log(data.questions);
-            console.log(data.answers);
+            navigate("/interview", { state: { questions: data.questions, answers: data.answers } });
         } 
         catch (error) { console.error('Error:', error); }
         finally { setLoading(false); }
