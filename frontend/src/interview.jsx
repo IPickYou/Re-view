@@ -25,7 +25,6 @@ function Interview() {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: { ideal: 960 }, height: { ideal: 540 } }
       });
-      console.log("getUserMedia 성공", stream);
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.onloadedmetadata = () => {
@@ -75,7 +74,6 @@ function Interview() {
   }, [isCameraOn]);
 
   const startRecognition = async () => {
-    console.log("startRecognition 실행됨");
     try {
       // 1) 서버에 /start 요청 보내기
       const startRes = await fetch('http://localhost:8000/start', {method: 'POST'});
@@ -86,7 +84,6 @@ function Interview() {
       }
 
       const startData = await startRes.json();
-      console.log('서버 시작 응답:', startData);
   
       // 2) 카메라 켜기
       setIsCameraOn(true);
@@ -106,7 +103,6 @@ function Interview() {
           if (res.ok) {
             const result = await res.json();
             setAnalysisResult(result);
-            console.log('분석 결과:', result);
           } 
           else { console.error('분석 실패:', res.status); }
         } 
@@ -264,10 +260,7 @@ function Interview() {
       }
   
       const data = await res.json();
-      if (data.final_text) {
-        console.log("🗣️ 인식된 음성: " + data.final_text);
-        setAudioCapture(data.final_text)
-      } 
+      if (data.final_text) { setAudioCapture(data.final_text) } 
       else { alert("⛔ 인식된 음성이 없습니다."); }
     } 
     catch (err) { console.error("analyze-audio 요청 에러:", err); } 
