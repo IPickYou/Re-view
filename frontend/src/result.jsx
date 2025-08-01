@@ -84,16 +84,31 @@ function Result() {
         else { setUserStyle(null); }   
     }, [chatAnswers]);
 
+    const getDateWithTimestamp = () => {
+        const now = new Date();
+
+        // 날짜: YYYY-MM-DD
+        const dateStr = now.toISOString().split('T')[0]; // '2025-08-01'
+
+        // 타임스탬프: 밀리초 기준
+        const timestamp = now.getTime(); // 1690886400000
+
+        return `${dateStr}-${timestamp}`;
+    };
+
     const handleSaveHistory = async () => {
         const interviewList = Array.isArray(interview)
         ? interview.map(item => Array.isArray(item) ? item[0] : item)
         : Object.values(interview).map(item => Array.isArray(item) ? item[0] : item);
 
+        const dateWithTimestamp = getDateWithTimestamp();
+
         const payload = {
+            sessionId: dateWithTimestamp, // 세션 ID
             interview: interviewList, // 인터뷰 문장 배열
             analysisResult,   // 분석 결과 객체
-            modelAnswers,     // 모델 답변 배열
             questions,        // 질문 배열
+            modelAnswers,     // 모델 답변 배열
             chatAnswers       // 사용자가 입력한 답변 배열
         };
 

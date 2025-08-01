@@ -70,12 +70,14 @@ def eval(data: EvalData):
 async def save(request: Request):
     body = await request.json()
 
+    session_id = body["sessionId"]
     interview = body["interview"]
     analysis_result = body["analysisResult"]
     model_answers = body["modelAnswers"]
     questions = body["questions"]
     chat_answers = body["chatAnswers"]
 
+    print("session_id:", session_id)
     print("interview:", interview)
     print("analysis_result:", analysis_result)
     print("model_answers:", model_answers)
