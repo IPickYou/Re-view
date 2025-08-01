@@ -4,6 +4,7 @@ from konlpy.tag import Okt
 from langchain.chains import LLMChain
 from langchain.chat_models import ChatOpenAI
 from langchain.prompts import PromptTemplate
+from transformers import T5ForConditionalGeneration, PreTrainedTokenizerFast
 
 import os
 import re
@@ -113,3 +114,16 @@ class SentenceAnalyzer:
             "answer": answer
         })
         return result
+    
+    def summarize(self, target):
+        # 모델 로드
+        model_id = "aimer3152/summary_model"
+        tokenizer = PreTrainedTokenizerFast.from_pretrained(model_id)
+        model = T5ForConditionalGeneration.from_pretrained(model_id)
+
+        input_text = "summarize: " + target.strip() # T5 스타일의 입력 프롬프트 구성
+        inputs = tokenizer.encode(input_text, return_tensors="pt", max_length=512, truncation=True) # 토크나이징
+        summary_ids = model.generate(inputs, max_length=100, min_length=10, length_penalty=2.0, num_beams=4, early_stopping=True) # 요약 생성
+        summary = tokenizer.decode(summary_ids[0], skip_special_tokens=True) # 결과 디코딩
+
+        return summary
