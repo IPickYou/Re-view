@@ -84,6 +84,16 @@ function Result() {
         else { setUserStyle(null); }   
     }, [chatAnswers]);
 
+    const handleSaveHistory = () => {
+        alert('분석 내역을 저장했습니다!');
+        
+        // 혹은
+        // fetch('저장 API URL', { method: 'POST', body: JSON.stringify(저장할 데이터) })
+        //   .then(res => res.json())
+        //   .then(data => console.log(data))
+        //   .catch(err => console.error(err));
+    };
+
     return (
         <>
             {/* 사이드바 */}
@@ -106,6 +116,23 @@ function Result() {
                 cursor: 'pointer',
             }}>
                 {isSidebarOpen ? '닫기 ×' : '열기 ☰'}
+            </button>
+
+            {/* 히스토리 저장 버튼 (우측 상단) */}
+            <button onClick={handleSaveHistory} style={{
+                position: 'fixed',
+                top: 20,
+                right: 20,
+                zIndex: 1100,
+                padding: '8px 12px',
+                cursor: 'pointer',
+                backgroundColor: '#4CAF50',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+            }}>
+                히스토리 저장
             </button>
 
             <h1 style={{ textAlign: 'center', marginBottom: '24px' }}>면접 평가</h1>
