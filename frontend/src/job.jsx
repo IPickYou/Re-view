@@ -25,7 +25,7 @@ function Job() {
             }
 
             const data = await res.json();  // 응답을 JSON으로 파싱
-            navigate("/interview", { state: { questions: data.questions, answers: data.answers } });
+            navigate("/interview", { state: { questions: data.questions, modelAnswers: data.answers } });
         } 
         catch (error) { console.error('Error:', error); }
         finally { setLoading(false); }

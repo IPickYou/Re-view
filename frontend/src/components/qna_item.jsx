@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-export default function QnaItem({ question, answer, index }) {
+export default function QnaItem({ question, answer, modelAnswer, index }) {
   const [isOpen, setIsOpen] = useState(false);
   const [analyzed, setAnalyzed] = useState(null);
 
@@ -71,7 +71,11 @@ export default function QnaItem({ question, answer, index }) {
           <div><strong>답변:</strong> {answer || "답변하지 않은 질문입니다."}</div>
           <div style={{ marginTop: '8px' }}>
             <strong>분석 결과:</strong>
-            {analyzed && (<div>{analyzed}</div>)}
+            {analyzed ? (<div>{analyzed}</div>) : (<div>답변하지 않은 질문입니다.</div>)}
+          </div>
+          <div style={{ marginTop: '8px' }}>
+            <strong>모범 답안:</strong>
+            {modelAnswer ? (<div>{modelAnswer}</div>) : (<div>답변하지 않은 질문입니다.</div>)}
           </div>
         </div>
       )}

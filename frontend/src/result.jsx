@@ -13,7 +13,7 @@ function Result() {
     const [userStyle, setUserStyle] = useState(null);
 
     const location = useLocation();
-    const { interview, analysisResult, questions, chatAnswers } = location.state || {};
+    const { interview, analysisResult, questions, modelAnswers, chatAnswers } = location.state || {};
 
     const interviewItems = interview?.interview || [];
     const emotions = interviewItems.map((item) => item.emotion);
@@ -106,7 +106,7 @@ function Result() {
 
                     <div style={{marginTop: '20px'}}>
                         {questions && chatAnswers ? (
-                            questions.map((question, i) => (<QnaItem key={i} index={i} question={question} answer={chatAnswers[i]} />))
+                            questions.map((question, i) => (<QnaItem key={i} index={i} question={question} answer={chatAnswers[i]} modelAnswer={modelAnswers[i]} />))
                         ) : (
                             <p>질문과 답변 데이터가 없습니다.</p>
                         )}
