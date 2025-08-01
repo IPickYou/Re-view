@@ -5,11 +5,11 @@ langchain==0.3.27
 langchain_community==0.3.27
 langchain_core==0.3.72
 librosa==0.11.0
-mediapipe==0.10.14
+mediapipe==0.10.21
 numpy==2.3.2
 openai==1.98.0
 openai_whisper==20250625
-opencv_contrib_python==4.12.0.88
+opencv_contrib_python==4.11.0.86
 opencv_python==4.12.0.88
 pandas==2.3.1
 protobuf==6.31.1
@@ -17,7 +17,7 @@ PyAudio==0.2.14
 pydantic==2.11.7
 pyloudnorm==0.1.1
 scikit_learn==1.7.1
-selenium==4.24.0
+selenium==4.34.2
 soundfile==0.13.1
 torch==2.7.1+cu118
 ultralytics==8.3.170

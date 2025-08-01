@@ -1,7 +1,17 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from main import decode_base64_image, get_audio_analyzer, get_video_analyzer, job_crawling, start_recognition, stop_recognition
-from schema import ImageData, UrlRequest 
+from fastapi.responses import JSONResponse
+from main import (
+    decode_base64_image,
+    eval_answer,
+    get_audio_analyzer,
+    get_video_analyzer,
+    job_crawling,
+    start_recognition,
+    stop_recognition,
+    user_style,
+)
+from schema import AnswerData, EvalData, ImageData, UrlRequest
 
 app = FastAPI()
 
@@ -47,6 +57,34 @@ def analyze_audio():
 def api_stop():
     result = stop_recognition()
     return result
+
+@app.post("/analyze-user")
+def analyze_user(data: AnswerData):
+    return user_style(data.chatAnswers)
+
+@app.post("/evaluate-answer")
+def eval(data: EvalData):
+    return eval_answer(data.question, data.answer)
+
+@app.post("/save-result")
+async def save(request: Request):
+    body = await request.json()
+
+    session_id = body["sessionId"]
+    interview = body["interview"]
+    analysis_result = body["analysisResult"]
+    model_answers = body["modelAnswers"]
+    questions = body["questions"]
+    chat_answers = body["chatAnswers"]
+
+    print("session_id:", session_id)
+    print("interview:", interview)
+    print("analysis_result:", analysis_result)
+    print("model_answers:", model_answers)
+    print("questions:", questions)
+    print("chat_answers:", chat_answers)
+
+    return {"status": "ok"}
 
 if __name__ == "__main__":
     import uvicorn

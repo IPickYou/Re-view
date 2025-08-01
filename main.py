@@ -1,6 +1,7 @@
 from audio_analisys import RealtimeAudioAnalyzer
 from interview_question_generator import QuestionGenerator
 from job_crawling import JobCrawler
+from sentence_analisys import SentenceAnalyzer
 from video_analisys import VideoAnalyzer
 
 import base64
@@ -17,6 +18,8 @@ video_analyzer = None
 audio_analyzer = None
 audio_thread = None
 video_thread = None
+
+sentence_analyzer = SentenceAnalyzer()
 
 # 채용공고 크롤링 함수
 def job_crawling(url):
@@ -104,6 +107,12 @@ def decode_base64_image(base64_str):
     img_data = base64.b64decode(base64_str)
     nparr = np.frombuffer(img_data, np.uint8)
     return cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+def user_style(answer):
+    return sentence_analyzer.analyze_user_style(answer)
+
+def eval_answer(question, answer):
+    return sentence_analyzer.evaluate_answer(question, answer)
 
 def get_video_analyzer():
     global video_analyzer

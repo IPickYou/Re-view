@@ -10,7 +10,7 @@ function Interview() {
   const [videoSize, setVideoSize] = useState({ width: 640, height: 480 });
 
   const location = useLocation();
-  const { questions, answers } = location.state || {};
+  const { questions, modelAnswers } = location.state || {};
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [chatAnswers, setChatAnswers] = useState(Array(questions?.length || 0).fill(""));
 
@@ -143,7 +143,8 @@ function Interview() {
             interview: data,
             analysisResult,
             questions,
-            chatAnswers,
+            modelAnswers,
+            chatAnswers
           }
         });
       }
