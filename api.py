@@ -92,12 +92,12 @@ async def save(request: Request):
     save_full_session(data)
 
     # 조회 예시
-    # sess = get_session("2025-08-01-1754037350812")
-    # print("Loaded session:", sess.session_id)
+    sess = get_session(session_id)
+    print("저장된 세션 ID:", sess.session_id)
     # print("Interview entries:", len(sess.interview_entries))
     # print("Model answers count:", len(sess.model_answers))
 
-    return {"status": "ok"}
+    return {"status": "ok", "sessionId": sess.session_id}
 
 if __name__ == "__main__":
     import uvicorn

@@ -67,7 +67,7 @@ function Result() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ chatAnswers })
             });
-        
+
             if (!res.ok) {
                 console.error('서버 시작 요청 실패:', res.status);
                 return;
@@ -75,13 +75,13 @@ function Result() {
 
             const data = await res.json();  // 응답을 JSON으로 파싱
             setUserStyle(data);
-        } 
+        }
         catch (error) { console.error('Error:', error); }
     }
 
     useEffect(() => {
         if (chatAnswers) { get_user_style(); }
-        else { setUserStyle(null); }   
+        else { setUserStyle(null); }
     }, [chatAnswers]);
 
     const getDateWithTimestamp = () => {
@@ -98,8 +98,8 @@ function Result() {
 
     const handleSaveHistory = async () => {
         const interviewList = Array.isArray(interview)
-        ? interview.map(item => Array.isArray(item) ? item[0] : item)
-        : Object.values(interview).map(item => Array.isArray(item) ? item[0] : item);
+            ? interview.map(item => Array.isArray(item) ? item[0] : item)
+            : Object.values(interview).map(item => Array.isArray(item) ? item[0] : item);
 
         const dateWithTimestamp = getDateWithTimestamp();
 
@@ -118,15 +118,17 @@ function Result() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-        
+
             if (!res.ok) {
                 const errBody = await res.json();
                 console.error('검증 에러 상세:', errBody);
                 return;
             }
 
-            // alert('분석 내역을 저장했습니다!');
-        } 
+            const data = await res.json();
+            console.log(data.sessionId);
+            alert('분석 내역을 저장했습니다!\nSession ID : ' + data.sessionId);
+        }
         catch (error) { console.error('Error:', error); }
     };
 
@@ -215,7 +217,7 @@ function Result() {
                     <h2>텍스트 분석</h2>
                     <UserStyleChart data={userStyle} />
 
-                    <div style={{marginTop: '20px'}}>
+                    <div style={{ marginTop: '20px' }}>
                         {questions && chatAnswers ? (
                             questions.map((question, i) => (<QnaItem key={i} index={i} question={question} answer={chatAnswers[i]} modelAnswer={modelAnswers[i]} />))
                         ) : (
