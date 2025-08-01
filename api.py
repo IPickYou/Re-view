@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from main import decode_base64_image, get_audio_analyzer, get_video_analyzer, job_crawling, start_recognition, stop_recognition
-from schema import ImageData, UrlRequest 
+from main import decode_base64_image, get_audio_analyzer, get_video_analyzer, job_crawling, start_recognition, stop_recognition, user_style
+from schema import AnswerData, ImageData, UrlRequest 
 
 app = FastAPI()
 
@@ -47,6 +47,10 @@ def analyze_audio():
 def api_stop():
     result = stop_recognition()
     return result
+
+@app.post("/analyze-user")
+def analyze_user(data: AnswerData):
+    return user_style(data.answer)
 
 if __name__ == "__main__":
     import uvicorn

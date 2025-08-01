@@ -1,5 +1,8 @@
 from pydantic import BaseModel
 
+class AnswerData(BaseModel):
+    answer: str
+
 class ImageData(BaseModel):
     image: str
 
