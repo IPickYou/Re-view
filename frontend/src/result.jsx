@@ -5,6 +5,9 @@ import GazeChart from './components/gaze_chart';
 import EmotionChart from './components/emotion_chart';
 import LufsChart from './components/lufs_chart';
 import WpsChart from './components/wps_chart';
+import UserStyleChart from './components/user_style_chart';
+
+import QnaItem from './components/qna_item';
 
 function Result() {
     const [userStyle, setUserStyle] = useState(null);
@@ -16,11 +19,6 @@ function Result() {
     const emotions = interviewItems.map((item) => item.emotion);
     const lufs = interviewItems.map((item) => Number(item.lufs.toFixed(2)));
     const wps = interviewItems.map((item) => Number(item.wps.toFixed(2)));
-
-    console.log("인터뷰 결과:", interview);
-    console.log("영상 분석 결과:", analysisResult);
-    console.log("질문:", questions);
-    console.log("답변:", chatAnswers);
 
     const sectionStyle = {
         border: '1px solid #ddd',
@@ -104,16 +102,15 @@ function Result() {
             <section style={sectionStyle}>
                 <div>
                     <h2>텍스트 분석</h2>
-                    {userStyle ? (
-                        <div>
-                            <pre style={{ background: '#f5f5f5', padding: '8px', borderRadius: '6px', textAlign: 'left' }}>
-                                {JSON.stringify(userStyle, null, 2)}
-                            </pre>
-                        </div>
-                    ) : (
-                        <p>분석된 스타일이 없습니다.</p>
-                    )}
-                    <p>답변 분석</p>
+                    <UserStyleChart data={userStyle} />
+
+                    <div style={{marginTop: '20px'}}>
+                        {questions && chatAnswers ? (
+                            questions.map((question, i) => (<QnaItem key={i} index={i} question={question} answer={chatAnswers[i]} />))
+                        ) : (
+                            <p>질문과 답변 데이터가 없습니다.</p>
+                        )}
+                    </div>
                 </div>
             </section>
         </>

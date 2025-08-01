@@ -19,7 +19,7 @@ audio_analyzer = None
 audio_thread = None
 video_thread = None
 
-sentence_analyzer = None
+sentence_analyzer = SentenceAnalyzer()
 
 # 채용공고 크롤링 함수
 def job_crawling(url):
@@ -109,9 +109,10 @@ def decode_base64_image(base64_str):
     return cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
 def user_style(answer):
-    global sentence_analyzer
-    sentence_analyzer = SentenceAnalyzer()
     return sentence_analyzer.analyze_user_style(answer)
+
+def eval_answer(question, answer):
+    return sentence_analyzer.evaluate_answer(question, answer)
 
 def get_video_analyzer():
     global video_analyzer
@@ -120,10 +121,6 @@ def get_video_analyzer():
 def get_audio_analyzer():
     global audio_analyzer
     return audio_analyzer
-
-def get_sentence_analyzer():
-    global sentence_analyzer
-    return sentence_analyzer
 
 if __name__ == "__main__":
     start_recognition()  # ✅ 직접 실행할 때만 동작

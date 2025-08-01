@@ -6,7 +6,6 @@ from langchain.chat_models import ChatOpenAI
 from langchain.prompts import PromptTemplate
 from transformers import T5ForConditionalGeneration, PreTrainedTokenizerFast
 
-import os
 import re
 
 class SentenceAnalyzer:
