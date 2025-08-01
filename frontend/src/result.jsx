@@ -11,6 +11,7 @@ import QnaItem from './components/qna_item';
 
 function Result() {
     const [userStyle, setUserStyle] = useState(null);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     const location = useLocation();
     const { interview, analysisResult, questions, modelAnswers, chatAnswers } = location.state || {};
@@ -32,6 +33,31 @@ function Result() {
         marginLeft: 'auto',
         marginRight: 'auto',
         textAlign: 'center',
+    };
+
+    const sidebarStyle = {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        height: '100vh',
+        width: isSidebarOpen ? '250px' : '0',
+        overflowX: 'hidden',
+        backgroundColor: '#333',
+        color: 'white',
+        transition: 'width 0.3s ease',
+        padding: isSidebarOpen ? '20px' : '0',
+        boxSizing: 'border-box',
+        zIndex: 1000,
+    };
+
+    const sidebarContentStyle = {
+        opacity: isSidebarOpen ? 1 : 0,
+        transition: 'opacity 0.3s ease',
+        pointerEvents: isSidebarOpen ? 'auto' : 'none',
+    };
+
+    const toggleSidebar = () => {
+        setIsSidebarOpen(!isSidebarOpen);
     };
 
     const get_user_style = async () => {
@@ -60,6 +86,28 @@ function Result() {
 
     return (
         <>
+            {/* 사이드바 */}
+            <div style={sidebarStyle}>
+                <div style={sidebarContentStyle}>
+                    <h2>사이드바</h2>
+                    <p>여기에 사이드바 내용 넣기</p>
+                    {/* 필요한 메뉴나 내용 추가 */}
+                </div>
+            </div>
+
+            {/* 사이드바 토글 버튼 (페이지 상단 우측 또는 원하는 위치에) */}
+            <button onClick={toggleSidebar} style={{
+                position: 'fixed',
+                top: 20,
+                left: isSidebarOpen ? 260 : 20,
+                zIndex: 1100,
+                transition: 'left 0.3s ease',
+                padding: '8px 12px',
+                cursor: 'pointer',
+            }}>
+                {isSidebarOpen ? '닫기 ×' : '열기 ☰'}
+            </button>
+
             <h1 style={{ textAlign: 'center', marginBottom: '24px' }}>면접 평가</h1>
 
             <section style={sectionStyle}>
