@@ -84,14 +84,39 @@ function Result() {
         else { setUserStyle(null); }   
     }, [chatAnswers]);
 
-    const handleSaveHistory = () => {
-        alert('분석 내역을 저장했습니다!');
+    const handleSaveHistory = async () => {
+        const interviewList = Array.isArray(interview)
+        ? interview.map(item => Array.isArray(item) ? item[0] : item)
+        : Object.values(interview).map(item => Array.isArray(item) ? item[0] : item);
+
+        const payload = {
+            interview: interviewList, // 인터뷰 문장 배열
+            analysisResult,   // 분석 결과 객체
+            modelAnswers,     // 모델 답변 배열
+            questions,        // 질문 배열
+            chatAnswers       // 사용자가 입력한 답변 배열
+        };
+
+        console.log("interviewList[0]:", interviewList[0]);
+
+        try {
+            const res = await fetch('http://localhost:8000/save-result', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
         
-        // 혹은
-        // fetch('저장 API URL', { method: 'POST', body: JSON.stringify(저장할 데이터) })
-        //   .then(res => res.json())
-        //   .then(data => console.log(data))
-        //   .catch(err => console.error(err));
+            if (!res.ok) {
+                const errBody = await res.json();
+                console.error('검증 에러 상세:', errBody);
+                return;
+            }
+
+            const data = await res.json();
+            console.log(data);
+            // alert('분석 내역을 저장했습니다!');
+        } 
+        catch (error) { console.error('Error:', error); }
     };
 
     return (
