@@ -97,8 +97,6 @@ function Result() {
             chatAnswers       // 사용자가 입력한 답변 배열
         };
 
-        console.log("interviewList[0]:", interviewList[0]);
-
         try {
             const res = await fetch('http://localhost:8000/save-result', {
                 method: 'POST',
@@ -112,8 +110,6 @@ function Result() {
                 return;
             }
 
-            const data = await res.json();
-            console.log(data);
             // alert('분석 내역을 저장했습니다!');
         } 
         catch (error) { console.error('Error:', error); }

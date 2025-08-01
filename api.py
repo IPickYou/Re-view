@@ -1,7 +1,17 @@
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from main import decode_base64_image, eval_answer, get_audio_analyzer, get_video_analyzer, job_crawling, start_recognition, stop_recognition, user_style
-from schema import AnswerData, DataPayload, EvalData, ImageData, UrlRequest 
+from fastapi.responses import JSONResponse
+from main import (
+    decode_base64_image,
+    eval_answer,
+    get_audio_analyzer,
+    get_video_analyzer,
+    job_crawling,
+    start_recognition,
+    stop_recognition,
+    user_style,
+)
+from schema import AnswerData, EvalData, ImageData, UrlRequest
 
 app = FastAPI()
 
@@ -57,11 +67,22 @@ def eval(data: EvalData):
     return eval_answer(data.question, data.answer)
 
 @app.post("/save-result")
-async def save(request: Request, data: DataPayload):
+async def save(request: Request):
     body = await request.json()
-    print("원본 JSON 바디:", body)
-    print("파싱된 data:", data)
-    return {"message": "데이터 받음", "received_interview_count": len(data.interview)}
+
+    interview = body["interview"]
+    analysis_result = body["analysisResult"]
+    model_answers = body["modelAnswers"]
+    questions = body["questions"]
+    chat_answers = body["chatAnswers"]
+
+    print("interview:", interview)
+    print("analysis_result:", analysis_result)
+    print("model_answers:", model_answers)
+    print("questions:", questions)
+    print("chat_answers:", chat_answers)
+
+    return {"status": "ok"}
 
 if __name__ == "__main__":
     import uvicorn
