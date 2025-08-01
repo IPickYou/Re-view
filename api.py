@@ -1,3 +1,4 @@
+from db_crud import init_db, save_full_session, get_session
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -12,6 +13,8 @@ from main import (
     user_style,
 )
 from schema import AnswerData, EvalData, ImageData, UrlRequest
+
+init_db()
 
 app = FastAPI()
 
@@ -77,12 +80,22 @@ async def save(request: Request):
     questions = body["questions"]
     chat_answers = body["chatAnswers"]
 
-    print("session_id:", session_id)
-    print("interview:", interview)
-    print("analysis_result:", analysis_result)
-    print("model_answers:", model_answers)
-    print("questions:", questions)
-    print("chat_answers:", chat_answers)
+    data = {
+        "session_id": session_id,
+        "interview": interview,
+        "analysis_result": analysis_result,
+        "model_answers": model_answers,
+        "questions": questions,
+        "chat_answers": chat_answers
+    }
+
+    save_full_session(data)
+
+    # 조회 예시
+    # sess = get_session("2025-08-01-1754037350812")
+    # print("Loaded session:", sess.session_id)
+    # print("Interview entries:", len(sess.interview_entries))
+    # print("Model answers count:", len(sess.model_answers))
 
     return {"status": "ok"}
 
