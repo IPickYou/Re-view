@@ -211,11 +211,6 @@ class RealtimeAudioAnalyzer:
                 "lufs": lufs
             })
 
-            # 텍스트 분석이랑 연계
-            model_id = "aimer3152/summary_model" 
-            tokenizer = PreTrainedTokenizerFast.from_pretrained(model_id)
-            model = T5ForConditionalGeneration.from_pretrained(model_id)
-
             try: # 임시 파일 삭제
                 os.remove(tmp_filename)
             except FileNotFoundError:
