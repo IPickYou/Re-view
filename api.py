@@ -45,7 +45,8 @@ def analyze_audio():
 
 @app.post("/stop")
 def api_stop():
-    stop_recognition()
+    result = stop_recognition()
+    return result
 
 if __name__ == "__main__":
     import uvicorn

@@ -111,10 +111,8 @@ class RealtimeAudioAnalyzer:
             byte_data = b''.join(self.recent_audio_chunk[-int(duration_sec * RATE / CHUNK):])
             wf.writeframes(byte_data)
 
-    def save_results(self, output_name="stt_analysis"):
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"{output_name}_{timestamp}"
-        dump_json(filename = filename, json_data = {"interview": self.sentences})
+    def save_results(self):
+        return {"interview": self.sentences}
 
     def _analyze_audio(self, responses):
         start_time = time.time()
@@ -264,7 +262,6 @@ class RealtimeAudioAnalyzer:
         print("🛑 중지 함수 호출됨.")
         self.closed = True
         self._buff.put(None)
-        self.save_results()
         self.postprocess_queue.put(None)
         self.postprocess_thread.join()
 
