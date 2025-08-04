@@ -209,13 +209,13 @@ class QuestionGenerator:
                 llm = ChatOpenAI(model="gpt-4o", temperature=0.7, max_tokens=500) # 질문 생성에 적합한 모델과 설정
 
                 all_generated_questions = {}
-                num_clusters_to_use = 7
+                num_clusters_to_use = 1
                 for cluster_id in range(num_clusters_to_use):
                     generated_q_list = self.generate_new_questions_for_cluster(
                         cluster_id=cluster_id,
                         clustered_df=clustered_data_df, # 군집화된 DataFrame 전달
                         llm_model=llm,
-                        num_examples=5, # 각 클러스터에서 5개의 예시를 LLM에 전달
+                        num_examples=1, # 각 클러스터에서 5개의 예시를 LLM에 전달
                         num_to_generate=1 # 각 클러스터당 3개의 새로운 질문 생성 시도
                     )
                     if generated_q_list:
