@@ -193,7 +193,7 @@ class QuestionGenerator:
         # 군집화 실행
         num_clusters_to_use = 7
         print(f"\n{num_clusters_to_use}개 클러스터로 질문 군집화 중...")
-        clustered_data_df = get_clustered_dataframe(df_questions, num_clusters=num_clusters_to_use)
+        clustered_data_df = self.get_clustered_dataframe(df_questions, num_clusters=num_clusters_to_use)
         clustered_data_df.to_csv("question_clustered.csv")
 
     def generate(self):
