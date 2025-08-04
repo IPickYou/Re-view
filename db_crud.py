@@ -92,3 +92,99 @@ def get_session(session_id: str):
         return db.query(SessionModel).filter_by(session_id=session_id).first()
     finally:
         db.close()
+
+def get_all_session_ids():
+    db = SessionLocal()
+    try:
+        return [sess.session_id for sess in db.query(SessionModel).all()]
+    finally:
+        db.close()
+
+def load_full_session(session_id: str):
+    db = SessionLocal()
+    try:
+        sess = db.query(SessionModel).filter_by(session_id=session_id).first()
+        if not sess:
+            return None
+
+        # interview
+        interview_entries = db.query(InterviewEntry).filter_by(session_id=sess.session_id).all()
+        interview = [
+            {
+                "original_sentence": ie.original_sentence,
+                "corrected_sentence": ie.corrected_sentence,
+                "cosine_similarity": ie.cosine_similarity,
+                "emotion": ie.emotion,
+                "start": ie.start,
+                "end": ie.end,
+                "wps": ie.wps,
+                "lufs": ie.lufs,
+            }
+            for ie in interview_entries
+        ]
+
+        # analysis_result
+        ar = db.query(AnalysisResult).filter_by(session_id=sess.session_id).first()
+        if ar:
+            emotions = db.query(EmotionBox).filter_by(analysis_result_id=ar.id).all()
+            face_landmarks = db.query(FaceLandmark).filter_by(analysis_result_id=ar.id).all()
+            pose_landmarks = db.query(PoseLandmark).filter_by(analysis_result_id=ar.id).all()
+            analysis_result = {
+                "gaze": ar.gaze,
+                "shoulder_angle": ar.shoulder_angle,
+                "shoulder_eval": ar.shoulder_eval,
+                "jitter_eval": ar.jitter_eval,
+                "gaze_center_ratio": ar.gaze_center_ratio,
+                "gaze_shift_count": ar.gaze_shift_count,
+                "posture_change_count": ar.posture_change_count,
+                "emotions": [
+                    {
+                        "emotion": e.emotion,
+                        "confidence": e.confidence,
+                        "box": e.box,
+                    }
+                    for e in emotions
+                ],
+                "face_landmarks": [
+                    {
+                        "x": fl.x,
+                        "y": fl.y,
+                        "z": fl.z,
+                        "visibility": fl.visibility,
+                    }
+                    for fl in face_landmarks
+                ],
+                "pose_landmarks": [
+                    {
+                        "x": pl.x,
+                        "y": pl.y,
+                        "z": pl.z,
+                        "visibility": pl.visibility,
+                    }
+                    for pl in pose_landmarks
+                ],
+            }
+        else:
+            analysis_result = {}
+
+        # model_answers, questions, chat_answers
+        model_answers = [
+            ma.content for ma in db.query(ModelAnswer).filter_by(session_id=sess.session_id).order_by(ModelAnswer.idx).all()
+        ]
+        questions = [
+            q.content for q in db.query(Question).filter_by(session_id=sess.session_id).order_by(Question.idx).all()
+        ]
+        chat_answers = [
+            ca.content for ca in db.query(ChatAnswer).filter_by(session_id=sess.session_id).order_by(ChatAnswer.idx).all()
+        ]
+
+        return {
+            "session_id": sess.session_id,
+            "interview": interview,
+            "analysis_result": analysis_result,
+            "model_answers": model_answers,
+            "questions": questions,
+            "chat_answers": chat_answers,
+        }
+    finally:
+        db.close()

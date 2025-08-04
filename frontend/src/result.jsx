@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation } from "react-router-dom";
+import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation, useNavigate } from "react-router-dom";
 
 import GazeChart from './components/gaze_chart';
 import EmotionChart from './components/emotion_chart';
@@ -12,11 +12,14 @@ import QnaItem from './components/qna_item';
 function Result() {
     const [userStyle, setUserStyle] = useState(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [historyList, setHistoryList] = useState([]);
+
+    const navigate = useNavigate();
 
     const location = useLocation();
     const { interview, analysisResult, questions, modelAnswers, chatAnswers } = location.state || {};
 
-    const interviewItems = interview?.interview || [];
+    const interviewItems = Array.isArray(interview) ? interview : (interview?.interview || []);
     const emotions = interviewItems.map((item) => item.emotion);
     const lufs = interviewItems.map((item) => Number(item.lufs.toFixed(2)));
     const wps = interviewItems.map((item) => Number(item.wps.toFixed(2)));
@@ -60,7 +63,26 @@ function Result() {
         setIsSidebarOpen(!isSidebarOpen);
     };
 
-    const get_user_style = async () => {
+    useEffect(()  => {
+        const getHistory = async () => {
+            const res = await fetch('http://localhost:8000/get-history', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            if (!res.ok) {
+                console.error('서버 시작 요청 실패:', res.status);
+                return;
+            }
+
+            const data = await res.json();  // 응답을 JSON으로 파싱
+            setHistoryList(data || []);
+        };
+
+        getHistory();
+    }, []);
+
+    const get_user_style = useCallback(async () => {
         try {
             const res = await fetch('http://localhost:8000/analyze-user', {
                 method: 'POST',
@@ -73,16 +95,16 @@ function Result() {
                 return;
             }
 
-            const data = await res.json();  // 응답을 JSON으로 파싱
+            const data = await res.json();
             setUserStyle(data);
         }
         catch (error) { console.error('Error:', error); }
-    }
+    }, [chatAnswers]);
 
     useEffect(() => {
         if (chatAnswers) { get_user_style(); }
         else { setUserStyle(null); }
-    }, [chatAnswers]);
+    }, [chatAnswers, get_user_style]);
 
     const getDateWithTimestamp = () => {
         const now = new Date();
@@ -126,7 +148,6 @@ function Result() {
             }
 
             const data = await res.json();
-            console.log(data.sessionId);
             alert('분석 내역을 저장했습니다!\nSession ID : ' + data.sessionId);
         }
         catch (error) { console.error('Error:', error); }
@@ -137,9 +158,37 @@ function Result() {
             {/* 사이드바 */}
             <div style={sidebarStyle}>
                 <div style={sidebarContentStyle}>
-                    <h2>사이드바</h2>
-                    <p>여기에 사이드바 내용 넣기</p>
-                    {/* 필요한 메뉴나 내용 추가 */}
+                    <h2>히스토리</h2>
+                    <div>
+                        {historyList.length === 0 ? (
+                            <p>저장된 내역이 없습니다.</p>
+                        ) : (
+                            historyList.map((item, idx) => {
+                                // sessionId 추출 (item이 string이면 그대로, 객체면 session_id 또는 sessionId 사용)
+                                let sessionId = typeof item === 'string'
+                                    ? item
+                                    : (item.session_id || item.sessionId || '');
+
+                                return (
+                                    <button key={idx} style={{
+                                        display: 'block',
+                                        width: '100%',
+                                        background: 'none',
+                                        border: 'none',
+                                        color: 'white',
+                                        textAlign: 'left',
+                                        cursor: 'pointer',
+                                        borderBottom: '1px solid #555',
+                                        padding: '8px 0',
+                                        fontSize: '1em'
+                                    }}
+                                    onClick={() => { if (sessionId) { navigate(`/result/${sessionId}`); } }}>
+                                        {sessionId}
+                                    </button>
+                                );
+                            })
+                        )}
+                    </div>
                 </div>
             </div>
 

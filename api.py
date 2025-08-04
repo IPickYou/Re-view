@@ -1,7 +1,6 @@
-from db_crud import init_db, save_full_session, get_session
+from db_crud import init_db, save_full_session, get_session, get_all_session_ids, load_full_session
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from main import (
     decode_base64_image,
     eval_answer,
@@ -69,6 +68,24 @@ def analyze_user(data: AnswerData):
 def eval(data: EvalData):
     return eval_answer(data.question, data.answer)
 
+@app.post("/get-history")
+def get_history():
+    return get_all_session_ids()
+
+@app.post("/load-session")
+async def load_session(request: Request):
+    body = await request.json()
+    session_id = body.get("sessionId")
+    if not session_id:
+        raise HTTPException(status_code=400, detail="sessionId is required")
+    result = load_full_session(session_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    print("Loaded session:", result)
+
+    return result
+
 @app.post("/save-result")
 async def save(request: Request):
     body = await request.json()
@@ -93,9 +110,8 @@ async def save(request: Request):
 
     # 조회 예시
     sess = get_session(session_id)
-    print("저장된 세션 ID:", sess.session_id)
-    # print("Interview entries:", len(sess.interview_entries))
-    # print("Model answers count:", len(sess.model_answers))
+    print("저장된 세션 ID: ", sess.session_id)
+    print("저장된 세션: ", sess)
 
     return {"status": "ok", "sessionId": sess.session_id}
 
