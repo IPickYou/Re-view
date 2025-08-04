@@ -149,6 +149,8 @@ function Result() {
 
             const data = await res.json();
             alert('분석 내역을 저장했습니다!\nSession ID : ' + data.sessionId);
+
+            window.location.reload(); // 히스토리 즉시 반영을 위한 새로고침
         }
         catch (error) { console.error('Error:', error); }
     };
