@@ -307,10 +307,38 @@ function Interview() {
 
   return (
     <div>
-      <button onClick={startRecognition} disabled={isCameraOn}>
+      <button
+        onClick={startRecognition}
+        disabled={isCameraOn}
+        style={{
+          padding: '10px 20px',
+          fontSize: '16px',
+          fontWeight: 'bold',
+          borderRadius: '6px',
+          border: 'none',
+          cursor: isCameraOn ? 'not-allowed' : 'pointer',
+          backgroundColor: isCameraOn ? '#ccc' : '#4CAF50', // 초록 or 회색
+          color: 'white',
+          marginRight: '10px'
+        }}
+      >
         {isCameraOn ? '분석 중...' : '면접 시작'}
       </button>
-      <button onClick={stopRecognition} disabled={!isCameraOn}>
+
+      <button
+        onClick={stopRecognition}
+        disabled={!isCameraOn}
+        style={{
+          padding: '10px 20px',
+          fontSize: '16px',
+          fontWeight: 'bold',
+          borderRadius: '6px',
+          border: 'none',
+          cursor: !isCameraOn ? 'not-allowed' : 'pointer',
+          backgroundColor: !isCameraOn ? '#ccc' : '#f44336', // 빨강 or 회색
+          color: 'white'
+        }}
+      >
         면접 종료
       </button>
   

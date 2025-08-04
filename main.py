@@ -38,8 +38,8 @@ def job_crawling(url):
     crawl_questions = job_crawler.generate_interview_questions(job_text)
     crawl_questions = job_crawler.extract_text(crawl_questions)
     gen_questions = question_generator.generate()
-    questions.extend(crawl_questions[:min(5, len(crawl_questions))])
-    questions.extend(gen_questions[:min(5, len(gen_questions))])
+    questions.extend(crawl_questions[:min(2, len(crawl_questions))])
+    questions.extend(gen_questions[:min(1, len(gen_questions))])
     print("\n예상 면접 질문 :")
     print(questions)
 

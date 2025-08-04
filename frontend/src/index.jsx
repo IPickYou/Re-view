@@ -5,6 +5,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Job from './job';
 import Interview from "./interview";
 import Result from "./result";
+import History from "./history";
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -13,6 +14,7 @@ root.render(
       <Route path="/" element={<Job />} />
       <Route path="/interview" element={<Interview />} />
       <Route path="/result" element={<Result />} />
+      <Route path="/result/:sessionId" element={<History />} />
     </Routes>
   </BrowserRouter>
 );

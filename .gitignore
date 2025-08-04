@@ -1,6 +1,8 @@
 __pycache__/
 .env
 
+interview.db
+
 audio/
 google-stt/
 json/
