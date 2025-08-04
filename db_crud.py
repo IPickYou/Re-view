@@ -5,8 +5,9 @@ from models import (
 )
 
 def init_db():
+    import models # models.py 안의 declarative 클래스들이 등록되도록
     from db import engine, Base
-    Base.metadata.create_all(engine)
+    Base.metadata.create_all(bind=engine)
 
 def save_full_session(data: dict):
     db = SessionLocal()
