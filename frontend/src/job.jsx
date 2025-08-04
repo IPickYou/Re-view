@@ -17,7 +17,7 @@ function Job() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ url })
             });
-        
+
             if (!res.ok) {
                 console.error('서버 시작 요청 실패:', res.status);
                 setLoading(false);
@@ -26,7 +26,7 @@ function Job() {
 
             const data = await res.json();  // 응답을 JSON으로 파싱
             navigate("/interview", { state: { questions: data.questions, modelAnswers: data.answers } });
-        } 
+        }
         catch (error) { console.error('Error:', error); }
         finally { setLoading(false); }
     };
@@ -34,7 +34,7 @@ function Job() {
     return (
         <>
             <style>
-            {`
+                {`
             @keyframes spin {
                 0% { transform: rotate(0deg); }
                 100% { transform: rotate(360deg); }
@@ -52,22 +52,25 @@ function Job() {
             </style>
 
             <div style={styles.container}>
-                <div style={styles.inputContainer}>
-                    <input 
-                        type="url" 
-                        value={url} 
-                        onChange={handleUrlChange} 
-                        placeholder="URL을 입력하세요" 
-                        style={styles.input}
-                        disabled={loading}
-                    />
-                    <button
-                        onClick={handleUrlSubmit}
-                        style={{ ...styles.button, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}
-                        disabled={loading}
-                    >
-                        {loading ? <div className="spinner"></div> : '등록'}
-                    </button>
+                <div style={{ ...styles.inputContainer, flexDirection: 'column', alignItems: 'center' }}>
+                    <h2>모의 면접을 희망하는 채용공고 링크를 입력해주세요.</h2>
+                    <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginTop: 12 }}>
+                        <input
+                            type="url"
+                            value={url}
+                            onChange={handleUrlChange}
+                            placeholder="URL을 입력하세요"
+                            style={styles.input}
+                            disabled={loading}
+                        />
+                        <button
+                            onClick={handleUrlSubmit}
+                            style={{ ...styles.button, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}
+                            disabled={loading}
+                        >
+                            {loading ? <div className="spinner"></div> : '등록'}
+                        </button>
+                    </div>
                 </div>
             </div>
         </>
