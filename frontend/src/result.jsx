@@ -119,9 +119,7 @@ function Result() {
     };
 
     const handleSaveHistory = async () => {
-        const interviewList = Array.isArray(interview)
-            ? interview.map(item => Array.isArray(item) ? item[0] : item)
-            : Object.values(interview).map(item => Array.isArray(item) ? item[0] : item);
+        const interviewList = Array.isArray(interview) ? interview : Object.values(interview);
 
         const dateWithTimestamp = getDateWithTimestamp();
 

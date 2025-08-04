@@ -15,8 +15,17 @@ def save_full_session(data: dict):
         sess = SessionModel(session_id=data["session_id"])
         db.add(sess)
 
+        # 인터뷰 데이터 평탄화 처리
+        raw_interview = data.get("interview", [])
+        interview_entries = []
+        for item in raw_interview:
+            if isinstance(item, list):
+                interview_entries.extend(item)  # 내부 리스트 펼치기
+            else:
+                interview_entries.append(item)
+
         # interview entries
-        for entry in data.get("interview", []):
+        for entry in interview_entries:
             ie = InterviewEntry(
                 session=sess,
                 original_sentence=entry.get("original_sentence"),
