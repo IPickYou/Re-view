@@ -39,6 +39,7 @@ class AnalysisResult(Base):
     gaze_center_ratio = Column(Float)
     gaze_shift_count = Column(Integer)
     posture_change_count = Column(Integer)
+    posture_change_rate = Column(Float)
     session = relationship("Session", back_populates="analysis_result")
     emotions = relationship("EmotionBox", back_populates="analysis_result", cascade="all, delete-orphan")
     face_landmarks = relationship("FaceLandmark", back_populates="analysis_result", cascade="all, delete-orphan")

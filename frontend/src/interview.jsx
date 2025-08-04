@@ -386,6 +386,7 @@ function Interview() {
               <p>📊 안정성: {analysisResult.jitter_eval || '-'}</p>
               <p>🎯 중심 시선 비율: {analysisResult.gaze_center_ratio !== undefined ? analysisResult.gaze_center_ratio.toFixed(1) + '%' : '-'}</p>
               <p>🔄 시선 이동 횟수: {analysisResult.gaze_shift_count || 0}</p>
+              <p>🔄 자세 변화율: {analysisResult.posture_change_rate !== undefined ? analysisResult.posture_change_rate.toFixed(1) + '%' : '-'}</p>
               <p>🔄 자세 변화 횟수: {analysisResult.posture_change_count || 0}</p>
 
               {/* 감정 분석 요약 (텍스트만) */}

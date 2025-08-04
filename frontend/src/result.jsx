@@ -63,7 +63,7 @@ function Result() {
         setIsSidebarOpen(!isSidebarOpen);
     };
 
-    useEffect(()  => {
+    useEffect(() => {
         const getHistory = async () => {
             const res = await fetch('http://localhost:8000/get-history', {
                 method: 'POST',
@@ -184,7 +184,7 @@ function Result() {
                                         padding: '8px 0',
                                         fontSize: '1em'
                                     }}
-                                    onClick={() => { if (sessionId) { navigate(`/result/${sessionId}`); } }}>
+                                        onClick={() => { if (sessionId) { navigate(`/result/${sessionId}`); } }}>
                                         {sessionId}
                                     </button>
                                 );
@@ -235,7 +235,17 @@ function Result() {
                         alignItems: 'center',     // 가로 가운데 정렬
                         gap: '12px',              // 차트와 텍스트 사이 간격
                     }}>
-                        <GazeChart title="시선 비율" label="중심" ratio={analysisResult?.gaze_center_ratio} />
+                        <div style={{
+                            display: 'flex',
+                            flexDirection: 'row',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            gap: '12px',
+                        }}>
+                            <GazeChart title="시선 비율" label="중심" ratio={analysisResult?.gaze_center_ratio} />
+                            <GazeChart title="자세 변화 비율" label="움직임" ratio={analysisResult?.posture_change_rate} />
+                        </div>
+                        
                         <div>
                             <span style={{ marginRight: '15px' }}> 시선 이동 횟수: {analysisResult?.gaze_shift_count ?? 'N/A'} </span>
                             <span> 자세 변화 횟수: {analysisResult?.posture_change_count ?? 'N/A'} </span>

@@ -200,8 +200,10 @@ class VideoAnalyzer:
 
         if self.total_frame_count > 0:
             ratio = self.center_gaze_count / self.total_frame_count * 100
+            posture_change_rate = self.posture_change_count / self.total_frame_count * 100
             response["gaze_center_ratio"] = ratio
             response["gaze_shift_count"] = self.gaze_away_count
             response["posture_change_count"] = self.posture_change_count
+            response["posture_change_rate"] = posture_change_rate
 
         return response

@@ -41,6 +41,7 @@ def save_full_session(data: dict):
             gaze_center_ratio=ar_raw.get("gaze_center_ratio"),
             gaze_shift_count=ar_raw.get("gaze_shift_count"),
             posture_change_count=ar_raw.get("posture_change_count"),
+            posture_change_rate=ar_raw.get("posture_change_rate")
         )
         db.add(ar)
 
@@ -138,6 +139,7 @@ def load_full_session(session_id: str):
                 "gaze_center_ratio": ar.gaze_center_ratio,
                 "gaze_shift_count": ar.gaze_shift_count,
                 "posture_change_count": ar.posture_change_count,
+                "posture_change_rate": ar.posture_change_rate,
                 "emotions": [
                     {
                         "emotion": e.emotion,
