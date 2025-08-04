@@ -29,13 +29,6 @@ function History() {
                     const questions = data["questions"]
                     const chat_answers = data["chat_answers"]
 
-                    console.log("session_id:", session_id);
-                    console.log("interview:", interview);
-                    console.log("analysis_result:", analysis_result);
-                    console.log("model_answers:", model_answers);
-                    console.log("questions:", questions);
-                    console.log("chat_answers:", chat_answers);
-
                     navigate("/result", {
                         state: {
                             interview: interview,
