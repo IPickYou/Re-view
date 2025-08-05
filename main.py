@@ -112,10 +112,10 @@ def decode_base64_image(base64_str):
     return cv2.imdecode(nparr, cv2.IMREAD_COLOR) # OpenCV BGR 이미지로 디코딩
 
 def user_style(answer):
-    return sentence_analyzer.analyze_user_style(answer)
+    return sentence_analyzer.analyze_user_style(answer) # 사용자 스타일 분석
 
 def eval_answer(question, answer):
-    return sentence_analyzer.evaluate_answer(question, answer)
+    return sentence_analyzer.evaluate_answer(question, answer) # 답변 평가
 
 def get_video_analyzer():
     global video_analyzer
