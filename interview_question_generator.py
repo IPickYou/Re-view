@@ -15,6 +15,9 @@ class QuestionGenerator:
     def __init__(self):
         load_dotenv()
 
+        # 질문 데이터셋 로드
+        # 이 부분은 사용자가 이미 가지고 있는 CSV 파일을 사용합니다.
+        # 예시로 'summary_experience_dataset.csv'와 'summary_new_dataset.csv'를 합쳐서 사용합니다.
         df_exp=pd.read_csv("summary_experience_dataset.csv")
         df_new=pd.read_csv("summary_new_dataset.csv")
         df_combined = pd.concat([df_exp['question_text'], df_new['question_text']], ignore_index=True)

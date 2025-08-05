@@ -26,25 +26,27 @@ def job_crawling(url):
     global job_crawler
     global question_generator
 
+    # JobCrawler와 QuestionGenerator 인스턴스 생성
     job_crawler = JobCrawler()
     question_generator = QuestionGenerator()
 
-    job_text = job_crawler.extract_wanted_job_text_selenium(url)
+    job_text = job_crawler.extract_wanted_job_text_selenium(url) # 채용 공고 텍스트 추출
     if not job_text:
         print("채용 공고 내용을 찾지 못 했습니다.")
         return
 
+    # 예상 면접 질문과 답변 생성
     questions = []
-    crawl_questions = job_crawler.generate_interview_questions(job_text)
-    crawl_questions = job_crawler.extract_text(crawl_questions)
-    gen_questions = question_generator.generate()
-    questions.extend(crawl_questions[:min(2, len(crawl_questions))])
-    questions.extend(gen_questions[:min(1, len(gen_questions))])
+    crawl_questions = job_crawler.generate_interview_questions(job_text) # OpenAI API를 사용하여 면접 질문 생성
+    crawl_questions = job_crawler.extract_text(crawl_questions) # 채용 공고에서 추출한 질문 텍스트를 정제
+    gen_questions = question_generator.generate() # LLM을 사용하여 추가 질문 생성
+    questions.extend(crawl_questions[:min(2, len(crawl_questions))]) # 채용 공고에서 추출한 질문 중 2개만 사용
+    questions.extend(gen_questions[:min(1, len(gen_questions))]) # 각 클러스터에서 2개의 질문만 사용
     print("\n예상 면접 질문 :")
     print(questions)
 
-    answers = job_crawler.generate_interview_answers(questions)
-    answers = job_crawler.extract_text(answers)
+    answers = job_crawler.generate_interview_answers(questions) # OpenAI API를 사용하여 면접 답변 생성
+    answers = job_crawler.extract_text(answers) # 예상 답변에서 추출한 답변 텍스트를 정제
     print("\n예상 면접 답변 :")
     print(answers)
 
@@ -67,7 +69,8 @@ def run_video():
 def start_recognition():
     global is_running, audio_thread, video_thread
 
-    if not is_running:
+    if not is_running: # 실행 중복 방지
+        # 멀티 스레딩 시작
         is_running = True
         audio_thread = threading.Thread(target=run_audio, daemon=False)
         video_thread = threading.Thread(target=run_video, daemon=False)
@@ -79,14 +82,14 @@ def start_recognition():
 def stop_recognition():
     global is_running, audio_analyzer, video_analyzer, audio_thread, video_thread
 
-    if is_running:
-        if audio_analyzer:
+    if is_running: # 실행 중복 방지
+        if audio_analyzer: # 음성 인식 중지 및 결과 저장
             audio_analyzer.stop()
             result = audio_analyzer.save_results()
             audio_analyzer = None
         else: result = {"interview": []} 
 
-        if video_analyzer:
+        if video_analyzer: # 영상 인식 중지
             video_analyzer.stop()
             video_analyzer = None
 
@@ -103,10 +106,10 @@ def stop_recognition():
     else: return {"status": "Not running"}
 
 def decode_base64_image(base64_str):
-    base64_str = re.sub("^data:image/.+;base64,", "", base64_str)
+    base64_str = re.sub("^data:image/.+;base64,", "", base64_str) # base64 문자열에서 메타데이터 제거
     img_data = base64.b64decode(base64_str)
-    nparr = np.frombuffer(img_data, np.uint8)
-    return cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    nparr = np.frombuffer(img_data, np.uint8) # OpenCV에서 사용할 수 있는 형식으로 변환
+    return cv2.imdecode(nparr, cv2.IMREAD_COLOR) # OpenCV BGR 이미지로 디코딩
 
 def user_style(answer):
     return sentence_analyzer.analyze_user_style(answer)

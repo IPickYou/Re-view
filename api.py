@@ -25,17 +25,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 웹 크롤링 API
 @app.post("/crawling")
 def crawl(request: UrlRequest):
     url = request.url
     questions = job_crawling(url)
     return questions
 
+# 실시간 음성/영상 인식 시작 API
 @app.post("/start")
 def api_start():
     response = start_recognition()
     return response
 
+# 현재 영상 프레임 분석 API
 @app.post("/analyze-frame")
 def analyze_frame(data: ImageData):
     video_analyzer = get_video_analyzer()
@@ -46,6 +49,7 @@ def analyze_frame(data: ImageData):
     video_analyzer.update_frame(img)
     return video_analyzer.analyze_latest_frame()
 
+# 답변 완료 버튼 클릭 시 호출되는 API
 @app.post("/analyze-audio")
 def analyze_audio():
     audio_analyzer = get_audio_analyzer()
@@ -55,23 +59,28 @@ def analyze_audio():
     else:
         return {"error": "Audio analyzer is not running."}
 
+# 실시간 음성/영상 인식 중지 API
 @app.post("/stop")
 def api_stop():
     result = stop_recognition()
     return result
 
+# 사용자 스타일 분석 API
 @app.post("/analyze-user")
 def analyze_user(data: AnswerData):
     return user_style(data.chatAnswers)
 
+# 답변 평가 API
 @app.post("/evaluate-answer")
 def eval(data: EvalData):
     return eval_answer(data.question, data.answer)
 
+# 저장한 세션목록 조회 API
 @app.post("/get-history")
 def get_history():
     return get_all_session_ids()
 
+# 저장한 세션 로드 API
 @app.post("/load-session")
 async def load_session(request: Request):
     body = await request.json()
@@ -86,10 +95,12 @@ async def load_session(request: Request):
 
     return result
 
+# 세션 저장 API
 @app.post("/save-result")
 async def save(request: Request):
     body = await request.json()
 
+    # 저장할 데이터 추출
     session_id = body["sessionId"]
     interview = body["interview"]
     analysis_result = body["analysisResult"]
@@ -108,7 +119,6 @@ async def save(request: Request):
 
     save_full_session(data)
 
-    # 조회 예시
     sess = get_session(session_id)
     print("저장된 세션 ID: ", sess.session_id)
     print("저장된 세션: ", sess)

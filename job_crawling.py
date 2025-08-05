@@ -13,7 +13,7 @@ import time
 class JobCrawler:
     def __init__(self):
         load_dotenv()
-        self.openai_client = OpenAIClient()
+        self.openai_client = OpenAIClient() # OpenAI 클라이언트 초기화
 
     # 원티드 채용 공고 웹 크롤링
     def extract_wanted_job_text_selenium(self, url):
@@ -31,7 +31,7 @@ class JobCrawler:
         time.sleep(5)
 
         wait = WebDriverWait(driver, 20)
-        try:
+        try: # 상세 정보 더 보기 버튼 클릭
             button = wait.until(
                 EC.element_to_be_clickable((By.XPATH, "//button[span[contains(text(), '상세 정보 더 보기')]]"))
             )
@@ -40,6 +40,8 @@ class JobCrawler:
             driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", button)
             time.sleep(1)
 
+            # 원티드 채용 공고 상세 페이지의 팝업 차단기 제거
+            # 이 부분은 페이지 구조에 따라 다를 수 있으므로 필요시 수정
             driver.execute_script("""
                 const blocker = document.querySelector('div.WantedApplyBtn_container__lBx_L');
                 if (blocker) { blocker.remove(); }
@@ -47,7 +49,7 @@ class JobCrawler:
 
             time.sleep(0.5)
 
-            driver.execute_script("arguments[0].click();", button)
+            driver.execute_script("arguments[0].click();", button) # 버튼 클릭
 
             wait.until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "div.JobDescription_JobDescription__paragraph__87w8I"))
@@ -57,10 +59,10 @@ class JobCrawler:
             print("상세 정보 더 보기 버튼 클릭 실패 또는 없음:", e)
             driver.save_screenshot("error_screenshot.png")
 
-        soup = BeautifulSoup(driver.page_source, "html.parser")
+        soup = BeautifulSoup(driver.page_source, "html.parser") # HTML 파싱
         driver.quit()
 
-        containers = soup.find_all('div', class_='JobDescription_JobDescription__paragraph__87w8I')
+        containers = soup.find_all('div', class_='JobDescription_JobDescription__paragraph__87w8I') # 채용 공고 본문 추출
         if not containers:
             print("채용 공고 본문을 찾지 못했습니다.")
             return None
@@ -70,6 +72,7 @@ class JobCrawler:
         return text
     
     def generate_interview_questions(self, job_text):
+        # OpenAI API를 사용하여 면접 질문 생성
         prompt = f"""
         다음은 채용 공고 내용입니다. 이 내용을 바탕으로 면접관이 물어볼 수 있는 질문을 2개 예상해 주세요.
         구체적으로, 업무 수행 능력, 역량, 성향, 지원 동기, 경험 중심의 질문 위주로 작성해 주세요.
@@ -94,6 +97,7 @@ class JobCrawler:
         return res
     
     def generate_interview_answers(self, questions):
+        # OpenAI API를 사용하여 면접 답변 생성
         prompt = f"""
         다음은 면접 예상 질문입니다. 이 내용을 바탕으로 면접관이 만족할 수 있는 모범답안들을 예상해 주세요.
         구체적으로, 질문에 담긴 업무 수행 능력, 역량, 성향, 지원 동기, 경험을 키워드로 문맥에 맞게 작성해 주세요.

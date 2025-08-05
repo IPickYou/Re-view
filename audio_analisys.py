@@ -39,8 +39,9 @@ CHUNK = int(RATE / 10)  # 100ms
 class RealtimeAudioAnalyzer:
     def __init__(self, language_code="ko-KR"):
         load_dotenv()
-        self.openai_client = OpenAIClient()
+        self.openai_client = OpenAIClient() # OpenAI API 클라이언트 초기화
 
+        # Google Speech-to-Text 설정
         self.language_code = language_code
         self._buff = queue.Queue()
         self.closed = True
@@ -49,10 +50,12 @@ class RealtimeAudioAnalyzer:
         self.recent_audio_chunk = []
         self.sentences = []
 
+        # 후교정 처리를 위한 큐와 스레드
         self.postprocess_queue = Queue()
         self.postprocess_thread = threading.Thread(target=self._postprocess_worker)
         self.postprocess_thread.start()
 
+        # 음성 스트림 설정
         self.audio_interface = pyaudio.PyAudio()
         self.audio_stream = self.audio_interface.open(
             format=pyaudio.paInt16,
@@ -61,9 +64,11 @@ class RealtimeAudioAnalyzer:
             stream_callback=self._fill_buffer,
         )
 
+        # 음성 인식 결과 저장용 변수
         self.current_transcript = ""
         self.result_text = ""
 
+    # Google Speech-to-Text 설정
     def _get_streaming_config(self):
         config = speech.RecognitionConfig(
             encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
@@ -76,11 +81,13 @@ class RealtimeAudioAnalyzer:
             interim_results=True
         )
 
+    # 오디오 스트림 콜백 함수
     def _fill_buffer(self, in_data, frame_count, time_info, status_flags):
         self._buff.put(in_data)
         self.recent_audio_chunk.append(in_data)
         return None, pyaudio.paContinue
 
+    # 오디오 스트림 생성기
     def _audio_generator(self):
         while not self.closed:
             chunk = self._buff.get()
@@ -88,15 +95,17 @@ class RealtimeAudioAnalyzer:
                 return
             yield speech.StreamingRecognizeRequest(audio_content=chunk)
 
+    # LUFS 계산을 위한 함수
     def _calculate_lufs(self, wav_file_path):
         data, rate = sf.read(wav_file_path)
         meter = pyln.Meter(rate)
         if len(data.shape) > 1:  # 스테레오인 경우
             data = data.mean(axis=1)  # 모노로 변환
 
-        loudness = meter.integrated_loudness(data)
+        loudness = meter.integrated_loudness(data) # 통합 LUFS 계산
         return loudness
 
+    # 최근 오디오 세그먼트 저장 함수
     def _save_recent_audio(self, filename, duration_sec):
         # 예: self.recent_audio_chunk에 audio bytes 누적 저장
         with wave.open(filename, 'wb') as wf:
@@ -111,11 +120,13 @@ class RealtimeAudioAnalyzer:
             byte_data = b''.join(self.recent_audio_chunk[-int(duration_sec * RATE / CHUNK):])
             wf.writeframes(byte_data)
 
+    # 오디오 분석 결과 저장 함수
     def save_results(self):
         return {"interview": self.sentences}
 
+    # 오디오 분석 메인 함수
     def _analyze_audio(self, responses):
-        start_time = time.time()
+        start_time = time.time() # 첫 문장 시작 시간 초기화
 
         for response in responses:
             print("📥 응답 수신됨")
@@ -124,12 +135,13 @@ class RealtimeAudioAnalyzer:
                 print("⚠️ 빈 응답")
                 continue
 
+            # 첫 번째 결과만 처리
             result = response.results[0]
             transcript = result.alternatives[0].transcript.strip()
 
             if result.is_final:
-                end_time = time.time()
-                self.postprocess_queue.put((transcript, start_time, end_time))
+                end_time = time.time() # 문장 끝 시간 기록
+                self.postprocess_queue.put((transcript, start_time, end_time)) # 후처리 큐에 추가
                 
                 print(f"💬 [최종] {transcript}", flush=True)
                 start_time = time.time()  # 다음 문장을 위한 시작시간 초기화
@@ -139,10 +151,12 @@ class RealtimeAudioAnalyzer:
             else:
                 self.current_transcript = transcript  # 🟢 중간 텍스트 저장
                 print(f"💬 [중간] {transcript}", flush=True)
-                
+
+    # 후처리 작업을 위한 워커 스레드
+    # 교정, 감정 분석 등을 처리      
     def _postprocess_worker(self):
         while True:
-            item = self.postprocess_queue.get()
+            item = self.postprocess_queue.get() # 큐에서 아이템 가져오기
             if item is None:
                 break
             transcript, start_time, end_time = item
@@ -174,7 +188,7 @@ class RealtimeAudioAnalyzer:
 
             lufs = self._calculate_lufs(tmp_filename) # 🔊 LUFS 계산
 
-            audio_features = extract_audio_features(tmp_filename, 0, duration)
+            audio_features = extract_audio_features(tmp_filename, 0, duration) # 음향적 특징 추출
 
             emotion_prompt = f"""
             문장: "{transcript}"
@@ -216,6 +230,9 @@ class RealtimeAudioAnalyzer:
             except FileNotFoundError:
                 pass 
 
+    # 결과를 반환하는 함수
+    # result_text가 비어있으면 최대 timeout초까지 기다렸다가 반환
+    # 반환 후에는 result_text를 초기화하여 중복 반환 방지
     def get_result(self, timeout=10):
         """
         result_text가 비어있으면 최대 timeout초까지 기다렸다가 반환.
@@ -230,6 +247,8 @@ class RealtimeAudioAnalyzer:
         self.result_text = ""  # 반환 후 초기화
         return final_text
 
+    # 오디오 스트림 시작 함수
+    # 이 함수는 별도의 스레드에서 실행되어야 함
     def start(self):
         print("🔧 start() 실행됨")
 
@@ -245,8 +264,7 @@ class RealtimeAudioAnalyzer:
         audio_thread = threading.Thread(target=recognize_loop)
         audio_thread.start()
 
-        # ESC 감지 루프 대신 리스너가 비동기 동작하므로
-        # 여기서는 closed 상태만 체크하며 대기
+        # closed 상태만 체크하며 대기
         while not self.closed:
             time.sleep(0.1)
 
@@ -260,6 +278,8 @@ class RealtimeAudioAnalyzer:
         self.postprocess_queue.put(None)
         self.postprocess_thread.join()
 
+    # 리소스 정리 함수
+    # 오디오 스트림과 후처리 스레드를 정리
     def cleanup(self):
         print("🧹 리소스 정리 중")
         if self.audio_stream is not None:

@@ -10,11 +10,12 @@ import re
 
 class SentenceAnalyzer:
     def __init__(self):
-        load_dotenv()
-        self.okt = Okt()
-        self.stopwords = set(["그", "저", "것", "이", "저는", "제가", "근데", "좀", "그냥", "정말", "되게", "음", "뭐"])
-        self.fillers = {"어", "음", "아", "그", "저기", "뭐", "응", "흠"}
+        load_dotenv() # 환경 변수 로드
+        self.okt = Okt() # 형태소 분석기 초기화
+        self.stopwords = set(["그", "저", "것", "이", "저는", "제가", "근데", "좀", "그냥", "정말", "되게", "음", "뭐"]) # 불용어 설정
+        self.fillers = {"어", "음", "아", "그", "저기", "뭐", "응", "흠"} # 필러 단어 설정
 
+        # LLM 프롬프트 템플릿 설정
         self.prompt_template = PromptTemplate.from_template("""
         너는 인공지능 면접관이다.  
         다음은 면접 질문과 지원자의 답변이다.  
@@ -66,10 +67,12 @@ class SentenceAnalyzer:
         6. 문제 해결 및 응용력: [ ]
         """)
 
+    # 텍스트 정제 함수
     def clean_text(self, text):
         text = re.sub(r"[^가-힣\s]", "", text)
         return text.strip()
 
+    # 키워드 추출 함수
     def extract_keywords(self, texts, min_len=2, top_k=20):
         counter = Counter()
         for text in texts:
@@ -79,6 +82,7 @@ class SentenceAnalyzer:
             counter.update(nouns)
         return counter.most_common(top_k)
     
+    # 문장 끝 단어 추출 함수
     def extract_sentence_endings(self, texts):
         endings = []
         for text in texts:
@@ -91,6 +95,7 @@ class SentenceAnalyzer:
                         endings.append(morphs[-1])
         return Counter(endings).most_common(10)
     
+    # 필러 단어 추출 함수
     def extract_fillers(self, texts):
         filler_counter = Counter()
         for text in texts:
@@ -98,20 +103,26 @@ class SentenceAnalyzer:
             filler_counter.update([m for m in morphs if m in self.fillers])
         return filler_counter.most_common(10)
     
+    # 사용자 스타일 분석 함수
     def analyze_user_style(self, texts):
         result = {}
-        result["keywords"] = self.extract_keywords(texts)
-        result["endings"] = self.extract_sentence_endings(texts)
-        result["fillers"] = self.extract_fillers(texts)
+        result["keywords"] = self.extract_keywords(texts) # 키워드 추출
+        result["endings"] = self.extract_sentence_endings(texts) # 문장 끝 단어 추출
+        result["fillers"] = self.extract_fillers(texts) # 필러 단어 추출
         return result
     
+    # 답변 평가 함수
     def evaluate_answer(self, question, answer, model_name="gpt-4o"):
+        # LLM chain 설정
         llm = ChatOpenAI(model=model_name, temperature=0)
         chain = LLMChain(llm=llm, prompt=self.prompt_template)
+
+        # 답변 평가 실행
         result = chain.run({
             "question": question,
             "answer": answer
         })
+        
         return result
     
     def summarize(self, target):
