@@ -21,7 +21,7 @@ function EmotionChart({ emotions }) {
 
   return (
     <div>
-        <h3 style={{ textAlign: "center", marginBottom: 10 }}>답변 감정 비율</h3>
+        <h3 style={{ textAlign: "center", marginBottom: 10 }}>답변 어감 비율</h3>
         <PieChart width={400} height={300}>
         <Pie
             data={data}
