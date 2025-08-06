@@ -7,7 +7,7 @@ function Interview() {
   const [analysisResult, setAnalysisResult] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [audioCapture, setAudioCapture] = useState("");
-  const [videoSize, setVideoSize] = useState({ width: 640, height: 480 });
+  const [videoSize, setVideoSize] = useState({ width: 320, height: 240 });
 
   const location = useLocation();
   const { questions, modelAnswers } = location.state || {};
@@ -27,7 +27,7 @@ function Interview() {
   const setupCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 960 }, height: { ideal: 540 } }
+        video: { width: { ideal: 320 }, height: { ideal: 240 } }
       });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -168,7 +168,7 @@ function Interview() {
     const video = videoRef.current;
   
     if (!canvas || !video || !faceLandmarks) return;
-  
+
     const ctx = canvas.getContext("2d");
   
     // ✅ 실제 비디오 픽셀 기준으로 캔버스 크기 설정
@@ -345,66 +345,99 @@ function Interview() {
       <h2>📷 웹캠 + 얼굴 분석</h2>
   
       {isCameraOn && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '20px' }}>
-          {/* 🎥 영상 + 분석 (왼쪽) */}
-          <div style={{ position: 'relative', width: `${videoSize.width}px`, height: `${videoSize.height}px`, flexShrink: 0 }}>
-            <video
-              ref={videoRef}
-              style={{ width: '100%', height: '100%', transform: 'scaleX(-1)', display: 'block' }}
-              muted
-              autoPlay
-              playsInline
-              onLoadedMetadata={() => {
-                const video = videoRef.current;
-                if (video) {
-                  setVideoSize({
-                    width: video.videoWidth,
-                    height: video.videoHeight,
-                  });
-                }
-              }}
-            ></video>
+        <div style={{ 
+          position: 'relative', 
+          minHeight: '100vh', 
+          padding: '20px', 
+          boxSizing: 'border-box',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+        }}>
+          <div style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            width: `${videoSize.width}px`,  // 크기 조절 가능
+            height: `${videoSize.height}px`,
+            zIndex: 1000,
+            boxShadow: '0 0 10px rgba(0,0,0,0.5)',
+            borderRadius: '8px',
+            overflow: 'hidden',
+            backgroundColor: 'black',
+          }}>
+            <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+              <video
+                ref={videoRef}
+                style={{ width: '100%', height: '100%', transform: 'scaleX(-1)', display: 'block' }}
+                muted
+                autoPlay
+                playsInline
+                onLoadedMetadata={() => {
+                  const video = videoRef.current;
+                  if (video) {
+                    setVideoSize({
+                      width: video.videoWidth,
+                      height: video.videoHeight,
+                    });
+                  }
+                }}
+              ></video>
 
-            <canvas
-              ref={canvasRef}
-              width={videoSize.width}
-              height={videoSize.height}
-              style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', zIndex: 10 }}
-            />
-
-            {/* 📊 분석 결과 UI (왼쪽 위) */}
-            <div style={{
-              position: 'absolute', top: 10, left: 10,
-              backgroundColor: 'rgba(0, 0, 0, 0.6)', color: 'white',
-              padding: '10px', borderRadius: '8px', fontSize: '14px',
-              fontFamily: 'monospace', maxWidth: '300px', zIndex: 20
-            }}>
-              <h3>영상 분석 결과</h3>
-              <p>👀 Gaze: {analysisResult.gaze || '-'}</p>
-              <p>🧍 자세 평가: {analysisResult.shoulder_eval || '-'}</p>
-              <p>📐 어깨 각도: {analysisResult.shoulder_angle !== undefined ? analysisResult.shoulder_angle.toFixed(1) : '-'}</p>
-              <p>📊 안정성: {analysisResult.jitter_eval || '-'}</p>
-              <p>🎯 중심 시선 비율: {analysisResult.gaze_center_ratio !== undefined ? analysisResult.gaze_center_ratio.toFixed(1) + '%' : '-'}</p>
-              <p>🔄 시선 이동 횟수: {analysisResult.gaze_shift_count || 0}</p>
-              <p>🔄 자세 변화율: {analysisResult.posture_change_rate !== undefined ? analysisResult.posture_change_rate.toFixed(1) + '%' : '-'}</p>
-              <p>🔄 자세 변화 횟수: {analysisResult.posture_change_count || 0}</p>
-
-              {/* 감정 분석 요약 (텍스트만) */}
-              {analysisResult.emotions && analysisResult.emotions.length > 0 && (() => {
-                const topEmotion = analysisResult.emotions.reduce((prev, current) =>
-                  current.confidence > prev.confidence ? current : prev
-                );
-                return (
-                  <div style={{ marginTop: 10 }}>
-                    <h3>😊 감정 분석</h3>
-                    <p>😃 감정: <strong>{topEmotion.emotion}</strong> (신뢰도: {(topEmotion.confidence * 100).toFixed(1)}%)</p>
-                  </div>
-                );
-              })()}
+              <canvas
+                ref={canvasRef}
+                width= {videoSize.width + 'px'}
+                height={videoSize.height + 'px'}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  pointerEvents: 'none',
+                  zIndex: 10,
+                  width: '100%',
+                  height: '100%'
+                }}
+              />
             </div>
           </div>
 
-          {/* ⚠️ 감정 경고 (오른쪽) */}
+          <div style={{
+            position: 'absolute',
+            top: 10,
+            left: 10,
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            color: 'white',
+            padding: '10px',
+            borderRadius: '8px',
+            fontSize: '14px',
+            fontFamily: 'monospace',
+            maxWidth: '300px',
+            maxHeight: 'calc(100% - 20px)',
+            overflowY: 'auto',
+            zIndex: 20
+          }}>
+            <h3>영상 분석 결과</h3>
+            <p>👀 Gaze: {analysisResult.gaze || '-'}</p>
+            <p>🧍 자세 평가: {analysisResult.shoulder_eval || '-'}</p>
+            <p>📐 어깨 각도: {analysisResult.shoulder_angle !== undefined ? analysisResult.shoulder_angle.toFixed(1) : '-'}</p>
+            <p>📊 안정성: {analysisResult.jitter_eval || '-'}</p>
+            <p>🎯 중심 시선 비율: {analysisResult.gaze_center_ratio !== undefined ? analysisResult.gaze_center_ratio.toFixed(1) + '%' : '-'}</p>
+            <p>🔄 시선 이동 횟수: {analysisResult.gaze_shift_count || 0}</p>
+            <p>🔄 자세 변화율: {analysisResult.posture_change_rate !== undefined ? analysisResult.posture_change_rate.toFixed(1) + '%' : '-'}</p>
+            <p>🔄 자세 변화 횟수: {analysisResult.posture_change_count || 0}</p>
+
+            {analysisResult.emotions && analysisResult.emotions.length > 0 && (
+              <div style={{ marginTop: 10 }}>
+                <h3>😊 감정 분석</h3>
+                {analysisResult.emotions.map((emotion, idx) => (
+                  <p key={idx}>
+                    {emotion.emotion}: {(emotion.confidence * 100).toFixed(1)}%
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
+
           {analysisResult.emotions && analysisResult.emotions.length > 0 && (() => {
             const topEmotion = analysisResult.emotions.reduce((prev, current) =>
               current.confidence > prev.confidence ? current : prev
@@ -422,79 +455,85 @@ function Interview() {
                 fontFamily: 'monospace',
                 width: '300px',
                 height: 'fit-content',
-                alignSelf: 'flex-start'
+                marginBottom: '20px',
+                // 중앙 배치 안되면 필요시 아래 추가
+                // marginLeft: 'auto',
+                // marginRight: 'auto',
               }}>
                 <h3>⚠️ 감정 경고</h3>
                 <p>현재 감정이 <strong>{topEmotion.emotion}</strong>입니다.<br />표정에 주의해주세요.</p>
               </div>
             );
           })()}
-        </div>
-      )}
-  
-      {/* 🎤 챗봇 인터뷰 UI */}
-      {isCameraOn && (
-        <div style={{ marginTop: '30px', fontFamily: 'monospace', padding: '10px', backgroundColor: '#f0f0f0', borderRadius: '8px' }}>
-          <h3>📝 인터뷰 진행</h3>
-          
-          {/* 질문 이동 버튼 */}
-          <button
-            onClick={prevQuestion}
-            disabled={currentQuestionIndex === 0}
-            style={{ marginRight: '10px', marginBottom: '10px', padding: '8px 16px' }}
-          >
-            이전 질문으로 이동
-          </button>
-          <button
-            onClick={nextQuestion}
-            disabled={currentQuestionIndex >= questions.length - 1}
-            style={{ marginBottom: '10px', padding: '8px 16px' }}
-          >
-            다음 질문으로 이동
-          </button>
 
-          {/* 현재 질문 */}
-          <div style={{ padding: '10px', backgroundColor: '#fff', border: '1px solid #ccc', borderRadius: '6px', marginBottom: '10px' }}>
-            <strong>Q{currentQuestionIndex + 1}.</strong> {questions[currentQuestionIndex]}
-          </div>
-
-          {/* 현재 답변 */}
+          {/* 중앙 질문 영역 */}
           <div style={{ 
-            padding: '10px', 
-            backgroundColor: '#e1ffe1', 
-            borderRadius: '6px', 
-            minHeight: '40px', 
-            marginBottom: '10px' 
+            marginTop: '60px',  // 위쪽 공간 확보
+            width: '60%', 
+            minWidth: '320px',
+            maxWidth: '800px',
+            backgroundColor: '#f0f0f0',
+            borderRadius: '12px',
+            padding: '20px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+            fontFamily: 'monospace',
+            textAlign: 'center',
           }}>
-            🗣️ {chatAnswers[currentQuestionIndex] || "아직 답변이 인식되지 않았습니다."}
-          </div>
+            {isCameraOn && (
+              <>
+                <h3>📝 인터뷰 진행</h3>
+                <div style={{ marginBottom: '10px' }}>
+                  <button
+                    onClick={prevQuestion}
+                    disabled={currentQuestionIndex === 0}
+                    style={{ marginRight: '10px', padding: '8px 16px' }}
+                  >
+                    이전 질문으로 이동
+                  </button>
+                  <button
+                    onClick={nextQuestion}
+                    disabled={currentQuestionIndex >= questions.length - 1}
+                    style={{ padding: '8px 16px' }}
+                  >
+                    다음 질문으로 이동
+                  </button>
+                </div>
 
-          {/* ⬇️ 인식된 음성 출력 버튼 - 현재 답변 아래에 위치 */}
-          <div style={{ marginBottom: '20px' }}>
-            <button 
-              onClick={getResponse} 
-              disabled={!isCameraOn || isLoading}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: '#4CAF50',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: isCameraOn && !isLoading ? 'pointer' : 'not-allowed'
-              }}
-            >
-              {isLoading ? "기다리는 중..." : "🎤 답변 완료"}
-            </button>
-          </div>
+                <div style={{ padding: '10px', backgroundColor: '#fff', borderRadius: '6px', marginBottom: '10px', border: '1px solid #ccc' }}>
+                  <strong>Q{currentQuestionIndex + 1}.</strong> {questions[currentQuestionIndex]}
+                </div>
 
-          {/* 이전 질문들 히스토리 */}
-          <div style={{ marginTop: '20px' }}>
-            {questions.slice(0, currentQuestionIndex).map((q, i) => (
-              <div key={i} style={{ marginBottom: '8px' }}>
-                <div><strong>Q{i + 1}.</strong> {q}</div>
-                <div style={{ marginLeft: 10, color: '#333' }}>{chatAnswers[i] || <i>답변 없음</i>}</div>
-              </div>
-            ))}
+                <div style={{ padding: '10px', backgroundColor: '#e1ffe1', borderRadius: '6px', minHeight: '40px', marginBottom: '10px' }}>
+                  🗣️ {chatAnswers[currentQuestionIndex] || "아직 답변이 인식되지 않았습니다."}
+                </div>
+
+                <button
+                  onClick={getResponse}
+                  disabled={!isCameraOn || isLoading}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#4CAF50',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: isCameraOn && !isLoading ? 'pointer' : 'not-allowed',
+                    marginBottom: '20px'
+                  }}
+                >
+                  {isLoading ? "기다리는 중..." : "🎤 답변 완료"}
+                </button>
+
+                {/* 이전 질문 히스토리 */}
+                <div style={{ textAlign: 'left', maxHeight: '200px', overflowY: 'auto' }}>
+                  {questions.slice(0, currentQuestionIndex).map((q, i) => (
+                    <div key={i} style={{ marginBottom: '8px' }}>
+                      <div><strong>Q{i + 1}.</strong> {q}</div>
+                      <div style={{ marginLeft: 10, color: '#333' }}>{chatAnswers[i] || <i>답변 없음</i>}</div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

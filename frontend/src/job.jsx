@@ -103,44 +103,48 @@ function Job() {
             {loading && (<LoadingOverlay message="해당 채용공고에 맞는 예시 질문 및 답변을 생성 중 입니다." />)}
 
             <div style={styles.container}>
-                <div style={{ ...styles.inputContainer, flexDirection: 'column', alignItems: 'center' }}>
-                    <h2>모의 면접을 희망하는 채용공고 링크를 입력해주세요.</h2>
-                    <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginTop: 12 }}>
-                        <input
-                            type="url"
-                            value={url}
-                            onChange={handleUrlChange}
-                            placeholder="URL을 입력하세요"
-                            style={styles.input}
-                            disabled={loading}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !loading) {
-                                handleUrlSubmit();
-                                }
-                            }}
-                            aria-label="채용공고 링크 입력"
-                        />
-                        <button
-                            onClick={handleUrlSubmit}
-                            style={{
-                                ...styles.button,
-                                cursor: loading ? 'not-allowed' : 'pointer',
-                                opacity: loading ? 0.7 : 1,
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 8,
-                            }}
-                            disabled={loading}
-                            aria-disabled={loading}
-                            aria-label="등록 버튼"
-                        >
-                            {loading ? (
-                                <>
-                                    <div className="spinner-small" aria-hidden="true" />
-                                    <span className="sr-only">로딩 중</span>
-                                </>
-                            ) : ('등록')}
-                        </button>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <h1 style={{ fontSize: '2.5rem', marginBottom: 20 }}>RE:VIEW</h1>
+
+                    <div style={{ ...styles.inputContainer, flexDirection: 'column', alignItems: 'center' }}>
+                        <h2>모의 면접을 희망하는 채용공고 링크를 입력해주세요.</h2>
+                        <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginTop: 12 }}>
+                            <input
+                                type="url"
+                                value={url}
+                                onChange={handleUrlChange}
+                                placeholder="URL을 입력하세요"
+                                style={styles.input}
+                                disabled={loading}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !loading) {
+                                    handleUrlSubmit();
+                                    }
+                                }}
+                                aria-label="채용공고 링크 입력"
+                            />
+                            <button
+                                onClick={handleUrlSubmit}
+                                style={{
+                                    ...styles.button,
+                                    cursor: loading ? 'not-allowed' : 'pointer',
+                                    opacity: loading ? 0.7 : 1,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 8,
+                                }}
+                                disabled={loading}
+                                aria-disabled={loading}
+                                aria-label="등록 버튼"
+                            >
+                                {loading ? (
+                                    <>
+                                        <div className="spinner-small" aria-hidden="true" />
+                                        <span className="sr-only">로딩 중</span>
+                                    </>
+                                ) : ('등록')}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -155,6 +159,7 @@ const styles = {
         alignItems: 'center',
         height: '100vh', // 화면 높이를 100%로 설정
         backgroundColor: '#f0f0f0', // 배경색
+        transform: 'translateY(-50px)'
     },
     inputContainer: {
         display: 'flex',
