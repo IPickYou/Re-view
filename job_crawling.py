@@ -8,7 +8,9 @@ from selenium.webdriver.support import expected_conditions as EC
 from utils import OpenAIClient
 
 import re
+import os
 import time
+import uuid
 
 class JobCrawler:
     def __init__(self):
@@ -25,6 +27,17 @@ class JobCrawler:
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36")
+        
+        # 🧩 user-data-dir을 유일하게 생성
+        unique_id = uuid.uuid4().hex
+        user_data_dir = f"/tmp/chrome-profile-{unique_id}"
+        os.makedirs(user_data_dir, exist_ok=True)
+        options.add_argument(f"--user-data-dir={user_data_dir}")
+
+        # 🔐 캐시 디렉토리도 격리
+        cache_dir = f"/tmp/chrome-cache-{unique_id}"
+        os.makedirs(cache_dir, exist_ok=True)
+        options.add_argument(f"--disk-cache-dir={cache_dir}")
 
         driver = webdriver.Chrome(options=options)
         driver.get(url)

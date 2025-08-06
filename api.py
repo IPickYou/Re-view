@@ -35,9 +35,13 @@ app.add_middleware(
 # 웹 크롤링 API
 @app.post("/crawling")
 def crawl(request: UrlRequest):
-    url = request.url
-    questions = job_crawling(url)  # 채용 공고에서 예상 면접 질문과 답변 생성
-    return questions
+    try:
+        url = request.url
+        questions = job_crawling(url)  # 채용 공고에서 예상 면접 질문과 답변 생성
+        return questions
+    except Exception as e:
+        print("Error in /crawling:", e)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # 실시간 음성/영상 인식 시작 API
@@ -59,12 +63,26 @@ def analyze_frame(data: ImageData):
     return video_analyzer.analyze_latest_frame()  # 현재 프레임 분석 결과 반환
 
 
+# 실시간 음성 데이터 수신 API
+@app.post("/audio-chunk")
+async def audio_chunk(request: Request):
+    audio_analyzer = get_audio_analyzer()
+    data = await request.body()
+    if audio_analyzer:
+        audio_analyzer.push_audio(data)
+        return {"status": "chunk received"}
+    else:
+        return {"error": "Audio analyzer not running"}
+
+
 # 답변 완료 버튼 클릭 시 호출되는 API
 @app.post("/analyze-audio")
 def analyze_audio():
-    audio_analyzer = get_audio_analyzer()  # 음성 분석기 가져오기
+    audio_analyzer = get_audio_analyzer()
     if audio_analyzer is not None:
-        final_text = audio_analyzer.get_result()  # 음성 인식 결과 가져오기
+        print(f"[analyze_audio] 현재 result_text 길이: {len(audio_analyzer.result_text)}")
+        final_text = audio_analyzer.get_result()
+        print(f"[analyze_audio] 반환할 텍스트: {final_text}")
         return {"final_text": final_text}
     else:
         return {"error": "Audio analyzer is not running."}

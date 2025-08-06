@@ -55,9 +55,10 @@ def job_crawling(url):
 # 🔊 음성 인식 함수
 def run_audio():
     global audio_analyzer
-
+    print("[run_audio] 호출됨")
     audio_analyzer = RealtimeAudioAnalyzer()
-    audio_analyzer.start()
+    print("[run_audio] audio_analyzer 인스턴스 생성됨")
+    threading.Thread(target=audio_analyzer.start, daemon=True).start()
 
 # 🎥 영상 인식 함수 (예: 얼굴 감지)
 def run_video():
@@ -81,7 +82,7 @@ def start_recognition():
 
 def stop_recognition():
     global is_running, audio_analyzer, video_analyzer, audio_thread, video_thread
-
+    print(f"[stop_recognition] audio_analyzer: {audio_analyzer}")
     if is_running: # 실행 중복 방지
         if audio_analyzer: # 음성 인식 중지 및 결과 저장
             audio_analyzer.stop()

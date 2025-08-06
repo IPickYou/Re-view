@@ -56,13 +56,13 @@ class RealtimeAudioAnalyzer:
         self.postprocess_thread.start()
 
         # 음성 스트림 설정
-        self.audio_interface = pyaudio.PyAudio()
-        self.audio_stream = self.audio_interface.open(
-            format=pyaudio.paInt16,
-            channels=1, rate=RATE,
-            input=True, frames_per_buffer=CHUNK,
-            stream_callback=self._fill_buffer,
-        )
+        # self.audio_interface = pyaudio.PyAudio()
+        # self.audio_stream = self.audio_interface.open(
+        #     format=pyaudio.paInt16,
+        #     channels=1, rate=RATE,
+        #     input=True, frames_per_buffer=CHUNK,
+        #     stream_callback=self._fill_buffer,
+        # )
 
         # 음성 인식 결과 저장용 변수
         self.current_transcript = ""
@@ -80,6 +80,12 @@ class RealtimeAudioAnalyzer:
             config=config,
             interim_results=True
         )
+    
+    def push_audio(self, audio_chunk):
+        if not self.closed:
+            self._buff.put(audio_chunk)
+            self.recent_audio_chunk.append(audio_chunk)
+
 
     # 오디오 스트림 콜백 함수
     def _fill_buffer(self, in_data, frame_count, time_info, status_flags):
@@ -89,16 +95,23 @@ class RealtimeAudioAnalyzer:
 
     # 오디오 스트림 생성기
     def _audio_generator(self):
+        silence_chunk = b'\x00' * CHUNK * 2
         while not self.closed:
-            chunk = self._buff.get()
+            try:
+                chunk = self._buff.get(timeout=1)
+            except queue.Empty:
+                chunk = silence_chunk
             if chunk is None:
                 return
             yield speech.StreamingRecognizeRequest(audio_content=chunk)
+
+
 
     # LUFS 계산을 위한 함수
     def _calculate_lufs(self, wav_file_path):
         data, rate = sf.read(wav_file_path)
         meter = pyln.Meter(rate)
+        print(f"🧪 LUFS 계산 오디오 길이: {len(data)/rate:.2f}초")
         if len(data.shape) > 1:  # 스테레오인 경우
             data = data.mean(axis=1)  # 모노로 변환
 
@@ -107,18 +120,22 @@ class RealtimeAudioAnalyzer:
 
     # 최근 오디오 세그먼트 저장 함수
     def _save_recent_audio(self, filename, duration_sec):
-        # 예: self.recent_audio_chunk에 audio bytes 누적 저장
+        required_chunks = int(duration_sec * RATE / CHUNK)
+        actual_chunks = len(self.recent_audio_chunk)
+        print(f"🧪 저장 요청: duration={duration_sec:.2f}s, 필요 청크={required_chunks}, 현재 청크={actual_chunks}")
+
+        if actual_chunks < required_chunks:
+            print("⚠️ 오디오 버퍼 부족, segment 저장 건너뜀")
+            return
+
+        byte_data = b''.join(self.recent_audio_chunk[-required_chunks:])
+
         with wave.open(filename, 'wb') as wf:
-            required_chunks = int(duration_sec * RATE / CHUNK)
-            if len(self.recent_audio_chunk) < required_chunks:
-                print("⚠️ 오디오 버퍼 부족, segment 저장 건너뜀")
-                return
-            
             wf.setnchannels(1)
             wf.setsampwidth(2)  # 16bit PCM
             wf.setframerate(RATE)
-            byte_data = b''.join(self.recent_audio_chunk[-int(duration_sec * RATE / CHUNK):])
             wf.writeframes(byte_data)
+
 
     # 오디오 분석 결과 저장 함수
     def save_results(self):
@@ -162,7 +179,7 @@ class RealtimeAudioAnalyzer:
             transcript, start_time, end_time = item
             
             # 교정, 감정분석 등 느린 API 호출 처리
-            duration = end_time - start_time
+            duration = max(0.5, end_time - start_time)  # 🔧 최소 길이 보장
             wps = len(transcript.split()) / duration if duration > 0 else 0
 
             # 1. 문장 교정
@@ -251,11 +268,11 @@ class RealtimeAudioAnalyzer:
     # 이 함수는 별도의 스레드에서 실행되어야 함
     def start(self):
         print("🔧 start() 실행됨")
-
         self.closed = False
-        
         print("🔁 오디오 스트림 시작됨")
-        requests = self._audio_generator()
+
+        requests = self._audio_generator()  # _buff 큐에서 데이터 받아 Google STT에 전달
+
         responses = self.client.streaming_recognize(self.streaming_config, requests)
 
         def recognize_loop():
@@ -264,12 +281,12 @@ class RealtimeAudioAnalyzer:
         audio_thread = threading.Thread(target=recognize_loop)
         audio_thread.start()
 
-        # closed 상태만 체크하며 대기
         while not self.closed:
             time.sleep(0.1)
 
         audio_thread.join()
         self.cleanup()
+
     
     def stop(self):
         print("🛑 중지 함수 호출됨.")
@@ -282,11 +299,11 @@ class RealtimeAudioAnalyzer:
     # 오디오 스트림과 후처리 스레드를 정리
     def cleanup(self):
         print("🧹 리소스 정리 중")
-        if self.audio_stream is not None:
-            self.audio_stream.stop_stream()
-            self.audio_stream.close()
-        if self.audio_interface is not None:
-            self.audio_interface.terminate()
+        # if self.audio_stream is not None:
+        #     self.audio_stream.stop_stream()
+        #     self.audio_stream.close()
+        # if self.audio_interface is not None:
+        #     self.audio_interface.terminate()
 
 class StaticAudioAnalyzer:
     def __init__(self):

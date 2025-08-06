@@ -1,0 +1,8 @@
+docker 빌드
+docker build -t review-app .
+
+docker 실행
+docker run --gpus all -it -p 3000:3000 -p 8000:8000 review-app
+
+docker 백엔드 로그 확인
+docker exec -it [컨테이너 ID] tail -f backend.log
